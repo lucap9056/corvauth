@@ -97,6 +97,22 @@ func TestLoad_DatabaseSettingsIgnoredWithoutURL(t *testing.T) {
 	}
 }
 
+func TestLoadDatabase_IgnoresUnrelatedSettings(t *testing.T) {
+	setEnv(t, map[string]string{
+		EnvDatabaseURL:       "postgres://localhost/auth",
+		EnvJWTAccessDuration: "invalid",
+		EnvOIDCIssuerURL:     "https://issuer.example.com",
+	})
+
+	db, err := LoadDatabase()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if db == nil || db.URL != "postgres://localhost/auth" {
+		t.Errorf("Database: got %+v", db)
+	}
+}
+
 func TestLoad_DatabaseAndJWT(t *testing.T) {
 	setEnv(t, map[string]string{
 		EnvDatabaseURL:          "postgres://localhost/auth",

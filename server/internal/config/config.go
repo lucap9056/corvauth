@@ -170,6 +170,15 @@ func Load() (*Config, error) {
 	return cfg, nil
 }
 
+func LoadDatabase() (*Database, error) {
+	env := &envReader{}
+	db := loadDatabase(env)
+	if env.errs != nil {
+		return nil, env.errs
+	}
+	return db, nil
+}
+
 func loadDatabase(env *envReader) *Database {
 	url := os.Getenv(EnvDatabaseURL)
 	if url == "" {
