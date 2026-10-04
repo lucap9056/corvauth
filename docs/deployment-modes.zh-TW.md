@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS users (
 
 - `ALLOW_REGISTRATION=true`：首次登入的使用者會被 insert，`username` 取自 provider 顯示名稱
 - 未開啟：只有已在 `users` 的 email 能登入
-- `DB_AUTO_CREATE_SCHEMA` 非 `true` 時，table 須事先存在（啟動時檢查）
+- `DB_AUTO_CREATE_SCHEMA` 非 `true` 時，table 須事先存在（啟動時檢查），見[建立 Schema](#建立-schema)
 
 ## External users
 
@@ -38,3 +38,24 @@ Users table 由你的應用程式管理，以 `DB_USER_EMAIL_REFERENCE` 指定�
 
 - 需要 `SELECT` 權限，啟動時檢查
 - `NULL` 視為空字串
+
+## 建立 Schema
+
+在 server 啟動前先建立 table，讓依賴 `users` 的 service 自行控制啟動順序
+
+- `corvauth schema apply`：建立 table 後結束，讀取 `DATABASE_URL` 與 `DB_*`
+  > external users 須在 users table 建立後執行
+- `corvauth schema print`：將 SQL 輸出到 stdout
+
+```yaml
+corvauth-schema:
+  image: ghcr.io/lucap9056/corvauth
+  command: ["schema", "apply"]
+  environment:
+    DATABASE_URL: postgres://...
+
+app:
+  depends_on:
+    corvauth-schema:
+      condition: service_completed_successfully
+```

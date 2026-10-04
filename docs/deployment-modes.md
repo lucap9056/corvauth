@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS users (
 
 - `ALLOW_REGISTRATION=true`: first-time users are inserted, with the provider's display name as `username`
 - Otherwise: only emails already in `users` can sign in
-- If `DB_AUTO_CREATE_SCHEMA` is not `true`, the table must already exist (checked on startup)
+- If `DB_AUTO_CREATE_SCHEMA` is not `true`, the table must already exist (checked on startup); see [Schema Initialization](#schema-initialization)
 
 ## External users
 
@@ -38,3 +38,24 @@ For a display name in the `username` claim, set `DB_USER_USERNAME_COLUMN` to a c
 
 - Requires `SELECT` privilege, checked on startup
 - `NULL` becomes an empty string
+
+## Schema Initialization
+
+Create tables before the server starts, so services depending on `users` control the startup order
+
+- `corvauth schema apply`: creates the tables, then exits; reads `DATABASE_URL` and `DB_*`
+  > external users: run after the users table exists
+- `corvauth schema print`: writes the SQL to stdout
+
+```yaml
+corvauth-schema:
+  image: ghcr.io/lucap9056/corvauth
+  command: ["schema", "apply"]
+  environment:
+    DATABASE_URL: postgres://...
+
+app:
+  depends_on:
+    corvauth-schema:
+      condition: service_completed_successfully
+```
