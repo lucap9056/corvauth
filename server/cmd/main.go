@@ -32,6 +32,13 @@ import (
 )
 
 func main() {
+	if len(os.Args) > 1 {
+		if err := runCommand(os.Args[1:], os.Stdout); err != nil {
+			log.Fatalln(err)
+		}
+		return
+	}
+
 	if err := runner.Run(run); err != nil {
 		log.Fatalln(err)
 	}
@@ -171,21 +178,24 @@ func openDatabase(life *lifecycle.Coordinator, cfg *config.Database) (*usersdb.S
 	sqlDB.SetConnMaxLifetime(cfg.ConnMaxLifetime)
 	sqlDB.SetConnMaxIdleTime(cfg.ConnMaxIdleTime)
 
-	usersOptions := []usersdb.Option{
-		usersdb.WithAutoCreateSchema(cfg.AutoCreateSchema),
-		usersdb.WithDatabaseOptions(database.WithCleanupInterval(cfg.CleanupInterval)),
-	}
-	if cfg.UserEmailReference != "" {
-		usersOptions = append(usersOptions, usersdb.WithExternal(cfg.UserEmailReference, cfg.UserUsernameColumn))
-	}
-
-	store, err := usersdb.New(sqlDB, usersOptions...)
+	store, err := usersdb.New(sqlDB, usersOptions(cfg)...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
 	life.OnExit(func() { store.Close() })
 
 	return store, nil
+}
+
+func usersOptions(cfg *config.Database) []usersdb.Option {
+	opts := []usersdb.Option{
+		usersdb.WithAutoCreateSchema(cfg.AutoCreateSchema),
+		usersdb.WithDatabaseOptions(database.WithCleanupInterval(cfg.CleanupInterval)),
+	}
+	if cfg.UserEmailReference != "" {
+		opts = append(opts, usersdb.WithExternal(cfg.UserEmailReference, cfg.UserUsernameColumn))
+	}
+	return opts
 }
 
 func newOAuth2Client(cfg *config.Config) (login.OAuth2Client, error) {
