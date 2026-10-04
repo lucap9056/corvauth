@@ -3,6 +3,7 @@ package usersdb
 import (
 	"errors"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
@@ -211,5 +212,20 @@ func TestNew_ManagedWithoutAutoCreateMissingTable(t *testing.T) {
 
 	if _, err := newStore(); err == nil {
 		t.Fatal("expected error, got nil")
+	}
+}
+
+func TestGenerateSchema(t *testing.T) {
+	for reference, wantUsers := range map[string]bool{"": true, externalReference: false} {
+		ddl, err := GenerateSchema(reference)
+		if err != nil {
+			t.Fatalf("GenerateSchema(%q): %v", reference, err)
+		}
+		if got := strings.Contains(ddl, `CREATE TABLE IF NOT EXISTS "users"`); got != wantUsers {
+			t.Errorf("GenerateSchema(%q) creates users = %v; want %v", reference, got, wantUsers)
+		}
+		if !strings.Contains(ddl, "CREATE TABLE IF NOT EXISTS auth_user_devices") {
+			t.Errorf("GenerateSchema(%q) missing auth_user_devices", reference)
+		}
 	}
 }

@@ -20,10 +20,37 @@ var schemaSQL string
 
 var schemaTemplate = template.Must(template.New("schema.sql").Parse(schemaSQL))
 
-func createSchema(db *sql.DB) error {
-	params := schema.DefaultParams()
+func generateUsersSchema() (string, error) {
 	var s strings.Builder
-	if err := schemaTemplate.Execute(&s, params); err != nil {
+	if err := schemaTemplate.Execute(&s, schema.DefaultParams()); err != nil {
+		return "", err
+	}
+	return s.String(), nil
+}
+
+func GenerateSchema(userEmailReference string) (string, error) {
+	if userEmailReference != "" {
+		params, err := schema.ParseUserEmailReference(userEmailReference)
+		if err != nil {
+			return "", err
+		}
+		return schema.Generate(params)
+	}
+
+	usersSchema, err := generateUsersSchema()
+	if err != nil {
+		return "", err
+	}
+	devicesSchema, err := schema.Generate(schema.DefaultParams())
+	if err != nil {
+		return "", err
+	}
+	return usersSchema + "\n\n" + devicesSchema, nil
+}
+
+func createSchema(db *sql.DB) error {
+	usersSchema, err := generateUsersSchema()
+	if err != nil {
 		return err
 	}
 
@@ -36,7 +63,7 @@ func createSchema(db *sql.DB) error {
 	if _, err := tx.Exec("SELECT pg_advisory_xact_lock($1)", schemaAdvisoryLockKey); err != nil {
 		return err
 	}
-	if _, err := tx.Exec(s.String()); err != nil {
+	if _, err := tx.Exec(usersSchema); err != nil {
 		return err
 	}
 	return tx.Commit()
