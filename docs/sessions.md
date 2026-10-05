@@ -23,6 +23,7 @@ Optional `/callback` request headers:
   - Claims include `user_email`, `device_id`, `username`
 - **Refresh token**: read from the `refresh_token` cookie or JSON body `{ "refresh_token": "..." }`
   - Cookie is `HttpOnly`, `SameSite=Lax`, and expires with the token
+  - Pages that cannot read the cookie get its expiry from `/refresh-status`
 - **Rotation**: each `/refresh` issues a new token and invalidates the old one, so active sessions keep extending
   - Concurrent `/refresh` calls with the same token share one rotation (across instances with Redis)
 - **Reuse detection**: an already-rotated token is treated as theft and deletes the device session
