@@ -23,6 +23,7 @@
   - Claim 含 `user_email`、`device_id`、`username`
 - **Refresh token**：讀自 `refresh_token` cookie 或 JSON body `{ "refresh_token": "..." }`
   - Cookie 為 `HttpOnly`、`SameSite=Lax`，與 token 同時到期
+  - 讀不到 cookie 的頁面可由 `/refresh-status` 取得到期時間
 - **Rotation**：每次 `/refresh` 簽發新 token、舊的失效，使用中的 session 持續延長
   - 同一 token 並行 `/refresh` 共用同一次 rotation（有 Redis 時跨實例也成立）
 - **重複使用偵測**：送出已 rotate 的舊 token 視為外洩，刪除該 device session

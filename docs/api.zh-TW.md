@@ -10,6 +10,7 @@
 | `GET /callback` | 所有模式 | `code`、`state` query | `200`，`message`：`{ "access_token", "refresh_token" }`（見下方） |
 | `POST /refresh` | session 模式 | refresh token | `200`，`message`：新 token pair，設定 cookie |
 | `POST /refresh-access` | session 模式 | refresh token | `200`，`message`：新 access token |
+| `POST /refresh-status` | session 模式 | refresh token | `200`，`message`：`{ "device_id", "issued_at", "expires_at" }`，不 rotate |
 | `GET /verify` | session 模式 | Bearer access token | `204` + 使用者 header（見 [Identity Token](#identity-token)） |
 | `POST /logout` | session 模式 | refresh token（選填） | `200`，刪除 device session 並清除 cookie |
 | `DELETE /users/me` | managed users | Bearer access token | `200`，刪除所有 session 與該使用者 |
@@ -57,7 +58,7 @@ Identity token 以 `HS256` 簽章，header `typ` 為 `identity+jwt`：
 
 ## Error Header
 
-`401` 由 device session 造成時，`/refresh`、`/refresh-access`、`/verify`、`DELETE /users/me` 會帶 `X-Auth-Error`，讓 gateway 與過期或格式錯誤的 token 區分：
+`401` 由 device session 造成時，`/refresh`、`/refresh-access`、`/refresh-status`、`/verify`、`DELETE /users/me` 會帶 `X-Auth-Error`，讓 gateway 與過期或格式錯誤的 token 區分：
 
 | 值 | 原因 |
 |---|---|

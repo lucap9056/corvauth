@@ -10,6 +10,7 @@
 | `GET /callback` | all modes | `code`, `state` query | `200`, `message`: `{ "access_token", "refresh_token" }` (see below) |
 | `POST /refresh` | session modes | refresh token | `200`, `message`: new token pair, sets cookie |
 | `POST /refresh-access` | session modes | refresh token | `200`, `message`: new access token |
+| `POST /refresh-status` | session modes | refresh token | `200`, `message`: `{ "device_id", "issued_at", "expires_at" }`, no rotation |
 | `GET /verify` | session modes | Bearer access token | `204` + user headers (see [Identity Token](#identity-token)) |
 | `POST /logout` | session modes | refresh token (optional) | `200`, deletes the device session, clears the cookie |
 | `DELETE /users/me` | managed users | Bearer access token | `200`, deletes all sessions and the user |
@@ -57,7 +58,7 @@ The identity token is signed with `HS256`, header `typ`: `identity+jwt`:
 
 ## Error Headers
 
-When a `401` is caused by the device session, `/refresh`, `/refresh-access`, `/verify`, and `DELETE /users/me` add `X-Auth-Error`, so a gateway can tell it apart from expired or malformed tokens:
+When a `401` is caused by the device session, `/refresh`, `/refresh-access`, `/refresh-status`, `/verify`, and `DELETE /users/me` add `X-Auth-Error`, so a gateway can tell it apart from expired or malformed tokens:
 
 | Value | Cause |
 |---|---|
