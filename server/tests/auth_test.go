@@ -482,6 +482,60 @@ func TestRefreshAccess(t *testing.T) {
 	}
 }
 
+func TestRefreshStatus(t *testing.T) {
+	const email = "status@example.com"
+
+	stub := newOAuthStub("", "", "")
+	defer stub.Close()
+
+	db := newMockDB()
+	db.seedUser(email)
+	env := newTestEnv(stub, db)
+
+	refresh, _ := env.issueTokens(email, "device")
+	claims, err := env.jwtManager.VerifyRefresh(refresh)
+	if err != nil {
+		t.Fatalf("VerifyRefresh: %v", err)
+	}
+
+	w := refreshAt(env, "/refresh-status", refresh)
+	if w.Code != http.StatusOK {
+		t.Fatalf("want 200, got %d: %s", w.Code, w.Body.String())
+	}
+	assertNoStore(t, w)
+	if cookies := w.Result().Cookies(); len(cookies) != 0 {
+		t.Errorf("want no cookies, got %v", cookies)
+	}
+
+	var resp struct {
+		Success bool `json:"success"`
+		Message struct {
+			DeviceID  string `json:"device_id"`
+			IssuedAt  int64  `json:"issued_at"`
+			ExpiresAt int64  `json:"expires_at"`
+		} `json:"message"`
+	}
+	if err := json.UnmarshalRead(w.Body, &resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if !resp.Success {
+		t.Error("want success=true")
+	}
+	if resp.Message.DeviceID != claims.DeviceID {
+		t.Errorf("device_id: want %q, got %q", claims.DeviceID, resp.Message.DeviceID)
+	}
+	if resp.Message.IssuedAt != claims.IssuedAt.Unix() {
+		t.Errorf("issued_at: want %d, got %d", claims.IssuedAt.Unix(), resp.Message.IssuedAt)
+	}
+	if resp.Message.ExpiresAt != claims.ExpiresAt.Unix() {
+		t.Errorf("expires_at: want %d, got %d", claims.ExpiresAt.Unix(), resp.Message.ExpiresAt)
+	}
+
+	if _, err := env.jwtManager.VerifyRefresh(refresh); err != nil {
+		t.Errorf("refresh token must not be rotated by /refresh-status: %v", err)
+	}
+}
+
 func TestVerify_Valid(t *testing.T) {
 	const email = "user4@example.com"
 
@@ -925,6 +979,9 @@ func TestAuthErrorHeader(t *testing.T) {
 		"/refresh-access": func(env *testEnv, r, _ string) *httptest.ResponseRecorder {
 			return refreshAt(env, "/refresh-access", r)
 		},
+		"/refresh-status": func(env *testEnv, r, _ string) *httptest.ResponseRecorder {
+			return refreshAt(env, "/refresh-status", r)
+		},
 		"/verify": func(env *testEnv, _, a string) *httptest.ResponseRecorder { return verifyWith(env, a) },
 	}
 	cases := []struct {
@@ -969,7 +1026,7 @@ func TestRefresh_RevokedTokenDeletesDevice(t *testing.T) {
 	const email = "reuse@example.com"
 	const secret = "test-device-secret"
 
-	for _, path := range []string{"/refresh", "/refresh-access"} {
+	for _, path := range []string{"/refresh", "/refresh-access", "/refresh-status"} {
 		t.Run(path, func(t *testing.T) {
 			stub := newOAuthStub("", "", "")
 			defer stub.Close()

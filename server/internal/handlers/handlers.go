@@ -35,6 +35,7 @@ func RegisterRoutes(mux *http.ServeMux, deps Dependencies) {
 		refreshHandler := refresh.New(deps.DB, deps.UsersDB, deps.JWTManager, deps.Flight, !opts.DevMode)
 		mux.HandleFunc("POST /refresh", refreshHandler.Refresh)
 		mux.HandleFunc("POST /refresh-access", refreshHandler.RefreshAccess)
+		mux.HandleFunc("POST /refresh-status", refreshHandler.RefreshStatus)
 
 		sessionHandler := session.New(deps.DB, deps.UsersDB, deps.JWTManager, deps.IdentitySigner)
 		mux.HandleFunc("GET /verify", sessionHandler.Verify)
