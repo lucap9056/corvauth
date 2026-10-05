@@ -167,3 +167,31 @@ func (h *Handler) RefreshAccess(w http.ResponseWriter, r *http.Request) {
 
 	response.NoStoreJSON(w, true, accessToken, http.StatusOK)
 }
+
+type Status struct {
+	DeviceID  string `json:"device_id"`
+	IssuedAt  int64  `json:"issued_at"`
+	ExpiresAt int64  `json:"expires_at"`
+}
+
+func (h *Handler) RefreshStatus(w http.ResponseWriter, r *http.Request) {
+	refreshToken, err := refreshtoken.FromRequest(r)
+	if err != nil {
+		response.Unauthorized(w, response.BearerChallenge, "Invalid refresh token", err)
+		return
+	}
+
+	claims, err := h.jwtManager.VerifyRefresh(refreshToken)
+	if err != nil {
+		h.deleteDeviceOnReuse(claims, err)
+		response.SetAuthError(w, err)
+		response.Unauthorized(w, response.InvalidTokenChallenge, "Invalid session or expired refresh token", err)
+		return
+	}
+
+	response.NoStoreJSON(w, true, Status{
+		DeviceID:  claims.DeviceID,
+		IssuedAt:  claims.IssuedAt.Unix(),
+		ExpiresAt: claims.ExpiresAt.Unix(),
+	}, http.StatusOK)
+}

@@ -115,6 +115,8 @@ func TestUnauthorized_WWWAuthenticate(t *testing.T) {
 		{"refresh invalid token", http.MethodPost, "/refresh", "", invalidRefresh, invalidChallenge},
 		{"refresh access missing token", http.MethodPost, "/refresh-access", "", "", missingChallenge},
 		{"refresh access invalid token", http.MethodPost, "/refresh-access", "", invalidRefresh, invalidChallenge},
+		{"refresh status missing token", http.MethodPost, "/refresh-status", "", "", missingChallenge},
+		{"refresh status invalid token", http.MethodPost, "/refresh-status", "", invalidRefresh, invalidChallenge},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
