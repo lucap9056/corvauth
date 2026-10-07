@@ -1,26 +1,168 @@
 # API
 
 - JSON 回應格式：`{ "success": bool, "message": ... }`
+- 錯誤時 `success` 為 `false`，`message` 為字串
 - Token 缺少或無效：`401` + `WWW-Authenticate: Bearer`
+- Refresh token 輸入：`refresh_token` cookie，沒有 cookie 時改讀 JSON body `{ "refresh_token": "..." }`
 
 | Endpoint | 提供於 | 輸入 | 成功時 |
 |---|---|---|---|
-| `GET /health` | 所有模式 | — | `200` |
-| `GET /login` | 所有模式 | — | `200`，`message`：`{ "url", "verifier"? }` |
-| `GET /callback` | 所有模式 | `code`、`state` query | `200`，`message`：`{ "access_token", "refresh_token" }`（見下方） |
-| `POST /refresh` | session 模式 | refresh token | `200`，`message`：新 token pair，設定 cookie |
-| `POST /refresh-access` | session 模式 | refresh token | `200`，`message`：新 access token |
-| `POST /refresh-status` | session 模式 | refresh token | `200`，`message`：`{ "device_id", "issued_at", "expires_at" }`，不 rotate |
-| `GET /verify` | session 模式 | Bearer access token | `204` + 使用者 header（見 [Identity Token](#identity-token)） |
-| `POST /logout` | session 模式 | refresh token（選填） | `200`，刪除 device session 並清除 cookie |
-| `DELETE /users/me` | managed users | Bearer access token | `200`，刪除所有 session 與該使用者 |
+| [`GET /health`](#get-health) | 所有模式 | — | `200` |
+| [`GET /login`](#get-login) | 所有模式 | — | `200` |
+| [`GET /callback`](#get-callback) | 所有模式 | `code`、`state` query | `200` |
+| [`POST /refresh`](#post-refresh) | session 模式 | `refresh_token` cookie 或 body | `200`，設定 cookie |
+| [`POST /refresh-access`](#post-refresh-access) | session 模式 | `refresh_token` cookie 或 body | `200` |
+| [`POST /refresh-status`](#post-refresh-status) | session 模式 | `refresh_token` cookie 或 body | `200`，不 rotate |
+| [`GET /verify`](#get-verify) | session 模式 | `Authorization: Bearer` access token | `204` + 使用者 header |
+| [`POST /logout`](#post-logout) | session 模式 | `refresh_token` cookie 或 body（選填） | `200`，刪除 device session 並清除 cookie |
+| [`DELETE /users/me`](#delete-usersme) | managed users | `Authorization: Bearer` access token | `200`，刪除所有 session 與該使用者，並清除 cookie |
 
-`/callback` 回傳的 token：
+## `GET /health`
 
-- Session 模式：session token，並設定 cookie
-- Stateless proxy：provider 的 token
+純文字：
 
-`/verify` 供 reverse proxy 的 auth request 使用（如 nginx `auth_request`、Traefik `forwardAuth`），把回傳的 header 轉發給 upstream
+```text
+OK
+```
+
+## `GET /login`
+
+```json
+{
+  "success": true,
+  "message": {
+    "url": "https://provider.example.com/authorize?...",
+    "verifier": "..."
+  }
+}
+```
+
+- `verifier`：只在 `OAUTH2_CLIENT_PKCE=true` 時出現
+
+## `GET /callback`
+
+選填的 request header 見[登入流程](sessions.zh-TW.md#登入流程)
+
+Session 模式回傳 session token 並設定 `refresh_token` cookie；stateless proxy 回傳 provider 的 token：
+
+```json
+{
+  "success": true,
+  "message": {
+    "access_token": "...",
+    "refresh_token": "..."
+  }
+}
+```
+
+Stateless proxy 在 `PASS_OAUTH_TOKEN=true` 時改把 token 放在 header（見 [Provider Token](sessions.zh-TW.md#provider-token)）：
+
+```json
+{
+  "success": true,
+  "message": "Logged in"
+}
+```
+
+## `POST /refresh`
+
+Request：`refresh_token` cookie，或 body：
+
+```json
+{
+  "refresh_token": "..."
+}
+```
+
+Response：
+
+```json
+{
+  "success": true,
+  "message": {
+    "access_token": "...",
+    "refresh_token": "..."
+  }
+}
+```
+
+## `POST /refresh-access`
+
+Request：`refresh_token` cookie，或 body：
+
+```json
+{
+  "refresh_token": "..."
+}
+```
+
+Response，`message` 為新的 access token：
+
+```json
+{
+  "success": true,
+  "message": "..."
+}
+```
+
+## `POST /refresh-status`
+
+Request：`refresh_token` cookie，或 body：
+
+```json
+{
+  "refresh_token": "..."
+}
+```
+
+Response：
+
+```json
+{
+  "success": true,
+  "message": {
+    "device_id": "3f1c2a9e-...",
+    "issued_at": 1767225600,
+    "expires_at": 1769817600
+  }
+}
+```
+
+- `issued_at`、`expires_at`：refresh token 的 Unix 秒數
+
+## `GET /verify`
+
+無 body，回傳使用者 header（見 [Identity Token](#identity-token)）
+
+供 reverse proxy 的 auth request 使用（如 nginx `auth_request`、Traefik `forwardAuth`），把回傳的 header 轉發給 upstream
+
+## `POST /logout`
+
+Request（選填）：`refresh_token` cookie，或 body：
+
+```json
+{
+  "refresh_token": "..."
+}
+```
+
+Response：
+
+```json
+{
+  "success": true,
+  "message": "Logged out and device session revoked"
+}
+```
+
+## `DELETE /users/me`
+
+```json
+{
+  "success": true,
+  "message": "Account deleted"
+}
+```
 
 ## Identity Token
 

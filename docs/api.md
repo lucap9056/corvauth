@@ -1,26 +1,168 @@
 # API
 
-- JSON response shape: `{ "success": bool, "message": ... }`
+- JSON responses use `{ "success": bool, "message": ... }`
+- Errors return `success: false` with a string `message`
 - Missing or invalid token: `401` + `WWW-Authenticate: Bearer`
+- Refresh token input: the `refresh_token` cookie, or a JSON body `{ "refresh_token": "..." }` when the cookie is absent
 
 | Endpoint | Available in | Input | Success |
 |---|---|---|---|
-| `GET /health` | all modes | — | `200` |
-| `GET /login` | all modes | — | `200`, `message`: `{ "url", "verifier"? }` |
-| `GET /callback` | all modes | `code`, `state` query | `200`, `message`: `{ "access_token", "refresh_token" }` (see below) |
-| `POST /refresh` | session modes | refresh token | `200`, `message`: new token pair, sets cookie |
-| `POST /refresh-access` | session modes | refresh token | `200`, `message`: new access token |
-| `POST /refresh-status` | session modes | refresh token | `200`, `message`: `{ "device_id", "issued_at", "expires_at" }`, no rotation |
-| `GET /verify` | session modes | Bearer access token | `204` + user headers (see [Identity Token](#identity-token)) |
-| `POST /logout` | session modes | refresh token (optional) | `200`, deletes the device session, clears the cookie |
-| `DELETE /users/me` | managed users | Bearer access token | `200`, deletes all sessions and the user |
+| [`GET /health`](#get-health) | all modes | — | `200` |
+| [`GET /login`](#get-login) | all modes | — | `200` |
+| [`GET /callback`](#get-callback) | all modes | `code`, `state` query | `200` |
+| [`POST /refresh`](#post-refresh) | session modes | `refresh_token` cookie or body | `200`, sets cookie |
+| [`POST /refresh-access`](#post-refresh-access) | session modes | `refresh_token` cookie or body | `200` |
+| [`POST /refresh-status`](#post-refresh-status) | session modes | `refresh_token` cookie or body | `200`, no rotation |
+| [`GET /verify`](#get-verify) | session modes | `Authorization: Bearer` access token | `204` + user headers |
+| [`POST /logout`](#post-logout) | session modes | `refresh_token` cookie or body (optional) | `200`, deletes the device session, clears the cookie |
+| [`DELETE /users/me`](#delete-usersme) | managed users | `Authorization: Bearer` access token | `200`, deletes all sessions and the user, clears the cookie |
 
-Tokens returned by `/callback`:
+## `GET /health`
 
-- Session modes: session tokens, and the cookie is set
-- Stateless proxy: the provider's tokens
+Plain text:
 
-`/verify` is for a reverse proxy's auth request (e.g. nginx `auth_request`, Traefik `forwardAuth`); forward the returned headers upstream
+```text
+OK
+```
+
+## `GET /login`
+
+```json
+{
+  "success": true,
+  "message": {
+    "url": "https://provider.example.com/authorize?...",
+    "verifier": "..."
+  }
+}
+```
+
+- `verifier`: present only when `OAUTH2_CLIENT_PKCE=true`
+
+## `GET /callback`
+
+Optional request headers are in [Login Flow](sessions.md#login-flow)
+
+Session modes return session tokens and set the `refresh_token` cookie; stateless proxy returns the provider's tokens:
+
+```json
+{
+  "success": true,
+  "message": {
+    "access_token": "...",
+    "refresh_token": "..."
+  }
+}
+```
+
+Stateless proxy with `PASS_OAUTH_TOKEN=true` moves the tokens to headers instead (see [Provider Tokens](sessions.md#provider-tokens)):
+
+```json
+{
+  "success": true,
+  "message": "Logged in"
+}
+```
+
+## `POST /refresh`
+
+Request: `refresh_token` cookie, or body:
+
+```json
+{
+  "refresh_token": "..."
+}
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": {
+    "access_token": "...",
+    "refresh_token": "..."
+  }
+}
+```
+
+## `POST /refresh-access`
+
+Request: `refresh_token` cookie, or body:
+
+```json
+{
+  "refresh_token": "..."
+}
+```
+
+Response, `message` is the new access token:
+
+```json
+{
+  "success": true,
+  "message": "..."
+}
+```
+
+## `POST /refresh-status`
+
+Request: `refresh_token` cookie, or body:
+
+```json
+{
+  "refresh_token": "..."
+}
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": {
+    "device_id": "3f1c2a9e-...",
+    "issued_at": 1767225600,
+    "expires_at": 1769817600
+  }
+}
+```
+
+- `issued_at` / `expires_at`: Unix seconds of the refresh token
+
+## `GET /verify`
+
+No body; returns user headers (see [Identity Token](#identity-token))
+
+For a reverse proxy's auth request (e.g. nginx `auth_request`, Traefik `forwardAuth`); forward the returned headers upstream
+
+## `POST /logout`
+
+Request (optional): `refresh_token` cookie, or body:
+
+```json
+{
+  "refresh_token": "..."
+}
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "Logged out and device session revoked"
+}
+```
+
+## `DELETE /users/me`
+
+```json
+{
+  "success": true,
+  "message": "Account deleted"
+}
+```
 
 ## Identity Token
 
