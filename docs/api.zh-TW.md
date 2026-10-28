@@ -14,6 +14,7 @@
 | [`POST /refresh-access`](#post-refresh-access) | session 模式 | `refresh_token` cookie 或 body | `200` |
 | [`POST /refresh-status`](#post-refresh-status) | session 模式 | `refresh_token` cookie 或 body | `200`，不 rotate |
 | [`GET /verify`](#get-verify) | session 模式 | `Authorization: Bearer` access token | `204` + 使用者 header |
+| [`GET /verify-optional`](#get-verify-optional) | session 模式 | `Authorization: Bearer` access token，有帶才檢查 | `204`，登入時才帶使用者 header |
 | [`POST /logout`](#post-logout) | session 模式 | `refresh_token` cookie 或 body（選填） | `200`，刪除 device session 並清除 cookie |
 | [`DELETE /users/me`](#delete-usersme) | managed users | `Authorization: Bearer` access token | `200`，刪除所有 session 與該使用者，並清除 cookie |
 
@@ -136,6 +137,14 @@ Response：
 
 供 reverse proxy 的 auth request 使用（如 nginx `auth_request`、Traefik `forwardAuth`），把回傳的 header 轉發給 upstream
 
+## `GET /verify-optional`
+
+供同時允許匿名存取的路由使用，只對帶有 `Authorization: Bearer` header 的請求檢查有效性
+
+- 沒有 `Authorization: Bearer`（包括 `Basic` 等其他 scheme）：`204`，不帶使用者 header（匿名）
+- 有 `Authorization: Bearer`：與 `/verify` 相同檢查，token 無效或過期同樣回 `401`，client 仍會去 refresh
+- upstream 以「沒有使用者 header」判定匿名，proxy 必須覆寫或清除 client 自帶的同名 header
+
 ## `POST /logout`
 
 Request（選填）：`refresh_token` cookie，或 body：
@@ -200,7 +209,7 @@ Identity token 以 `HS256` 簽章，header `typ` 為 `identity+jwt`：
 
 ## Error Header
 
-`401` 由 device session 造成時，`/refresh`、`/refresh-access`、`/refresh-status`、`/verify`、`DELETE /users/me` 會帶 `X-Auth-Error`，讓 gateway 與過期或格式錯誤的 token 區分：
+`401` 由 device session 造成時，`/refresh`、`/refresh-access`、`/refresh-status`、`/verify`、`/verify-optional`、`DELETE /users/me` 會帶 `X-Auth-Error`，讓 gateway 與過期或格式錯誤的 token 區分：
 
 | 值 | 原因 |
 |---|---|

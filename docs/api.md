@@ -14,6 +14,7 @@
 | [`POST /refresh-access`](#post-refresh-access) | session modes | `refresh_token` cookie or body | `200` |
 | [`POST /refresh-status`](#post-refresh-status) | session modes | `refresh_token` cookie or body | `200`, no rotation |
 | [`GET /verify`](#get-verify) | session modes | `Authorization: Bearer` access token | `204` + user headers |
+| [`GET /verify-optional`](#get-verify-optional) | session modes | `Authorization: Bearer` access token, checked only when present | `204`, user headers only when signed in |
 | [`POST /logout`](#post-logout) | session modes | `refresh_token` cookie or body (optional) | `200`, deletes the device session, clears the cookie |
 | [`DELETE /users/me`](#delete-usersme) | managed users | `Authorization: Bearer` access token | `200`, deletes all sessions and the user, clears the cookie |
 
@@ -136,6 +137,14 @@ No body; returns user headers (see [Identity Token](#identity-token))
 
 For a reverse proxy's auth request (e.g. nginx `auth_request`, Traefik `forwardAuth`); forward the returned headers upstream
 
+## `GET /verify-optional`
+
+For routes that also allow anonymous access; only requests with an `Authorization: Bearer` header are checked for validity
+
+- Without `Authorization: Bearer`, including other schemes such as `Basic`: `204`, no user headers (anonymous)
+- With `Authorization: Bearer`: checked the same way as `/verify`, including the `401` for an invalid or expired token, so clients still refresh
+- Upstreams treat missing user headers as anonymous, so the proxy must overwrite or strip client-supplied copies of them
+
 ## `POST /logout`
 
 Request (optional): `refresh_token` cookie, or body:
@@ -200,7 +209,7 @@ The identity token is signed with `HS256`, header `typ`: `identity+jwt`:
 
 ## Error Headers
 
-When a `401` is caused by the device session, `/refresh`, `/refresh-access`, `/refresh-status`, `/verify`, and `DELETE /users/me` add `X-Auth-Error`, so a gateway can tell it apart from expired or malformed tokens:
+When a `401` is caused by the device session, `/refresh`, `/refresh-access`, `/refresh-status`, `/verify`, `/verify-optional`, and `DELETE /users/me` add `X-Auth-Error`, so a gateway can tell it apart from expired or malformed tokens:
 
 | Value | Cause |
 |---|---|
