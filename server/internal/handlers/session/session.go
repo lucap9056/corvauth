@@ -69,6 +69,14 @@ func (h *Handler) Verify(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func (h *Handler) VerifyOptional(w http.ResponseWriter, r *http.Request) {
+	if _, ok := bearerToken(r); !ok {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	h.Verify(w, r)
+}
+
 func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	refreshToken, err := refreshtoken.FromRequest(r)
 	if err == nil {

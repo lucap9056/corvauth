@@ -39,6 +39,7 @@ func RegisterRoutes(mux *http.ServeMux, deps Dependencies) {
 
 		sessionHandler := session.New(deps.DB, deps.UsersDB, deps.JWTManager, deps.IdentitySigner)
 		mux.HandleFunc("GET /verify", sessionHandler.Verify)
+		mux.HandleFunc("GET /verify-optional", sessionHandler.VerifyOptional)
 		mux.HandleFunc("POST /logout", sessionHandler.Logout)
 		if !deps.UsersDB.External() {
 			mux.HandleFunc("DELETE /users/me", sessionHandler.DeleteMe)
