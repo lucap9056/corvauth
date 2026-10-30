@@ -102,8 +102,9 @@ func NewOIDC(ctx context.Context, cfg OIDCConfig, opts ...providers.Option) (*Cl
 	}, nil
 }
 
-func (c *Client) AuthURL(state string, verifier string) string {
+func (c *Client) AuthURL(state, verifier, redirectURL string) string {
 	options := append(slices.Clone(c.authOptions), oauth2.S256ChallengeOption(verifier))
+	options = appendRedirectURL(options, redirectURL)
 	return c.config.AuthCodeURL(state, options...)
 }
 
@@ -120,8 +121,16 @@ func (c *Client) ValidateIssuer(iss string) error {
 	return nil
 }
 
-func (c *Client) Exchange(ctx context.Context, code string, verifier string) (*oauth2.Token, error) {
-	return c.config.Exchange(ctx, code, oauth2.VerifierOption(verifier))
+func (c *Client) Exchange(ctx context.Context, code, verifier, redirectURL string) (*oauth2.Token, error) {
+	options := appendRedirectURL([]oauth2.AuthCodeOption{oauth2.VerifierOption(verifier)}, redirectURL)
+	return c.config.Exchange(ctx, code, options...)
+}
+
+func appendRedirectURL(options []oauth2.AuthCodeOption, redirectURL string) []oauth2.AuthCodeOption {
+	if redirectURL == "" {
+		return options
+	}
+	return append(options, oauth2.SetAuthURLParam("redirect_uri", redirectURL))
 }
 
 func (c *Client) GetUser(ctx context.Context, token *oauth2.Token) (*providers.Userinfo, error) {

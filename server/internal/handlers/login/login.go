@@ -28,9 +28,9 @@ const (
 )
 
 type OAuth2Client interface {
-	AuthURL(state, verifier string) string
+	AuthURL(state, verifier, redirectURL string) string
 	ValidateIssuer(iss string) error
-	Exchange(ctx context.Context, code, verifier string) (*oauth2.Token, error)
+	Exchange(ctx context.Context, code, verifier, redirectURL string) (*oauth2.Token, error)
 	GetUser(ctx context.Context, token *oauth2.Token) (*providers.Userinfo, error)
 	Revoke(ctx context.Context, token *oauth2.Token) error
 }
@@ -95,7 +95,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	url := h.oauth2Client.AuthURL(stateVal, verifier)
+	url := h.oauth2Client.AuthURL(stateVal, verifier, session.RedirectURL)
 	resp := &LoginResponse{URL: url}
 	if h.options.ClientPKCE {
 		resp.Verifier = verifier
@@ -224,7 +224,7 @@ func (h *Handler) handleExchange(code, state, device, headerVerifier string) (*E
 
 		exchangeCtx, exchangeCancel := context.WithTimeout(ctx, 10*time.Second)
 		defer exchangeCancel()
-		oauth2Token, err := h.oauth2Client.Exchange(exchangeCtx, code, session.Verifier)
+		oauth2Token, err := h.oauth2Client.Exchange(exchangeCtx, code, session.Verifier, session.RedirectURL)
 		if err != nil {
 			if err == context.DeadlineExceeded {
 				return &ExchangeResponse{

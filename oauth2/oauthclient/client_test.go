@@ -64,6 +64,54 @@ func TestAuthURL_ProviderSpecificParams(t *testing.T) {
 	}
 }
 
+func TestRedirectURL_DefaultAndOverride(t *testing.T) {
+	const defaultURL = "https://default.example/callback"
+	const overrideURL = "https://other.example/callback"
+	tests := []struct {
+		name        string
+		redirectURL string
+		want        string
+	}{
+		{"default", "", defaultURL},
+		{"override", overrideURL, overrideURL},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var exchangedRedirectURL string
+			tokenServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				r.ParseForm()
+				exchangedRedirectURL = r.PostForm.Get("redirect_uri")
+				w.Header().Set("Content-Type", "application/json")
+				json.MarshalWrite(w, map[string]any{"access_token": "token", "token_type": "Bearer"})
+			}))
+			defer tokenServer.Close()
+
+			c := New(Config{
+				Provider:    "generic",
+				ClientID:    "id",
+				RedirectURL: defaultURL,
+				AuthURL:     "https://example.com/auth",
+				TokenURL:    tokenServer.URL,
+			})
+
+			u, err := url.Parse(c.AuthURL("state", oauth2.GenerateVerifier(), tt.redirectURL))
+			if err != nil {
+				t.Fatalf("parse AuthURL: %v", err)
+			}
+			if got := u.Query().Get("redirect_uri"); got != tt.want {
+				t.Errorf("AuthURL redirect_uri = %q; want %q", got, tt.want)
+			}
+
+			if _, err := c.Exchange(context.Background(), "code", oauth2.GenerateVerifier(), tt.redirectURL); err != nil {
+				t.Fatalf("Exchange: %v", err)
+			}
+			if exchangedRedirectURL != tt.want {
+				t.Errorf("Exchange redirect_uri = %q; want %q", exchangedRedirectURL, tt.want)
+			}
+		})
+	}
+}
+
 func TestNewOIDC_OfflineAccessAddsPromptConsent(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		json.MarshalWrite(w, providers.OIDCDiscovery{
@@ -101,7 +149,7 @@ func TestNewOIDC_OfflineAccessAddsPromptConsent(t *testing.T) {
 
 func authURLQuery(t *testing.T, c *Client) url.Values {
 	t.Helper()
-	u, err := url.Parse(c.AuthURL("state", oauth2.GenerateVerifier()))
+	u, err := url.Parse(c.AuthURL("state", oauth2.GenerateVerifier(), ""))
 	if err != nil {
 		t.Fatalf("parse AuthURL: %v", err)
 	}
