@@ -9,29 +9,29 @@ import (
 )
 
 type memoryCache struct {
-	verifiers *otter.Cache[string, string]
+	sessions *otter.Cache[string, Session]
 }
 
 func newMemoryCache(maximumSize int, ttl time.Duration) (*memoryCache, error) {
-	verifiers, err := cache.NewMemoryCache[string](maximumSize, func(string) time.Duration {
+	sessions, err := cache.NewMemoryCache[string](maximumSize, func(Session) time.Duration {
 		return ttl
 	})
 	if err != nil {
 		return nil, err
 	}
-	return &memoryCache{verifiers: verifiers}, nil
+	return &memoryCache{sessions: sessions}, nil
 }
 
-func (m *memoryCache) Take(_ context.Context, key string) (string, error) {
-	var verifier string
-	m.verifiers.Compute(key, func(oldValue string, found bool) (string, otter.ComputeOp) {
-		verifier = oldValue
-		return "", otter.InvalidateOp
+func (m *memoryCache) Take(_ context.Context, key string) (Session, error) {
+	var session Session
+	m.sessions.Compute(key, func(oldValue Session, found bool) (Session, otter.ComputeOp) {
+		session = oldValue
+		return Session{}, otter.InvalidateOp
 	})
-	return verifier, nil
+	return session, nil
 }
 
-func (m *memoryCache) Set(_ context.Context, key, verifier string) error {
-	m.verifiers.Set(key, verifier)
+func (m *memoryCache) Set(_ context.Context, key string, session Session) error {
+	m.sessions.Set(key, session)
 	return nil
 }

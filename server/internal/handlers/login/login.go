@@ -89,7 +89,8 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	verifier := oauth2.GenerateVerifier()
 	stateVal := generateState()
 
-	if err := h.stateCache.Set(r.Context(), stateVal, verifier); err != nil {
+	session := state.Session{Verifier: verifier}
+	if err := h.stateCache.Set(r.Context(), stateVal, session); err != nil {
 		response.JSON(w, false, "Failed to initialize login session", http.StatusInternalServerError, err)
 		return
 	}
@@ -195,7 +196,7 @@ func (h *Handler) handleExchange(code, state, device, headerVerifier string) (*E
 		stateCtx, stateCancel := context.WithTimeout(ctx, 5*time.Second)
 		defer stateCancel()
 
-		verifier, err := h.stateCache.Take(stateCtx, state)
+		session, err := h.stateCache.Take(stateCtx, state)
 		if err != nil {
 			return &ExchangeResponse{
 				Success: false,
@@ -203,7 +204,7 @@ func (h *Handler) handleExchange(code, state, device, headerVerifier string) (*E
 				State:   http.StatusInternalServerError,
 			}, err
 		}
-		if verifier == "" {
+		if session.Verifier == "" {
 			return &ExchangeResponse{
 				Success: false,
 				Message: "Invalid or expired state",
@@ -212,7 +213,7 @@ func (h *Handler) handleExchange(code, state, device, headerVerifier string) (*E
 		}
 
 		if h.options.ClientPKCE {
-			if headerVerifier != verifier {
+			if headerVerifier != session.Verifier {
 				return &ExchangeResponse{
 					Success: false,
 					Message: "Invalid PKCE verifier",
@@ -223,7 +224,7 @@ func (h *Handler) handleExchange(code, state, device, headerVerifier string) (*E
 
 		exchangeCtx, exchangeCancel := context.WithTimeout(ctx, 10*time.Second)
 		defer exchangeCancel()
-		oauth2Token, err := h.oauth2Client.Exchange(exchangeCtx, code, verifier)
+		oauth2Token, err := h.oauth2Client.Exchange(exchangeCtx, code, session.Verifier)
 		if err != nil {
 			if err == context.DeadlineExceeded {
 				return &ExchangeResponse{

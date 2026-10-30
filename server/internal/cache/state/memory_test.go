@@ -13,14 +13,15 @@ func TestMemoryCache_TakeIsSingleUse(t *testing.T) {
 		t.Fatalf("NewCache: %v", err)
 	}
 
-	if err := c.Set(ctx, "s1", "v1"); err != nil {
+	want := Session{Verifier: "v1", RedirectURL: "https://app.example/callback"}
+	if err := c.Set(ctx, "s1", want); err != nil {
 		t.Fatalf("Set: %v", err)
 	}
-	if got, _ := c.Take(ctx, "s1"); got != "v1" {
-		t.Fatalf("Take = %q; want v1", got)
+	if got, _ := c.Take(ctx, "s1"); got != want {
+		t.Fatalf("Take = %+v; want %+v", got, want)
 	}
-	if got, _ := c.Take(ctx, "s1"); got != "" {
-		t.Fatalf("second Take = %q; want empty", got)
+	if got, _ := c.Take(ctx, "s1"); got != (Session{}) {
+		t.Fatalf("second Take = %+v; want empty", got)
 	}
 }
 
@@ -31,11 +32,11 @@ func TestMemoryCache_Expires(t *testing.T) {
 		t.Fatalf("NewCache: %v", err)
 	}
 
-	c.Set(ctx, "s1", "v1")
+	c.Set(ctx, "s1", Session{Verifier: "v1"})
 	time.Sleep(100 * time.Millisecond)
 
-	if got, _ := c.Take(ctx, "s1"); got != "" {
-		t.Fatalf("Take after TTL = %q; want empty", got)
+	if got, _ := c.Take(ctx, "s1"); got != (Session{}) {
+		t.Fatalf("Take after TTL = %+v; want empty", got)
 	}
 }
 

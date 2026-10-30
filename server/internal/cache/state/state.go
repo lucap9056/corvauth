@@ -7,9 +7,14 @@ import (
 	"github.com/lucap9056/corvauth/server/internal/cache"
 )
 
+type Session struct {
+	Verifier    string `json:"verifier"`
+	RedirectURL string `json:"redirect_url,omitempty"`
+}
+
 type Cache interface {
-	Set(ctx context.Context, state, verifier string) error
-	Take(ctx context.Context, state string) (string, error)
+	Set(ctx context.Context, state string, session Session) error
+	Take(ctx context.Context, state string) (Session, error)
 }
 
 type config struct {
