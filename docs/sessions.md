@@ -3,9 +3,10 @@
 ## Login Flow
 
 1. `GET /login` returns `{ "url": "..." }`; redirect the user there
-   - The server generates a PKCE verifier and stores it under a one-time `state` (Redis if `REDIS_URL` is set, otherwise memory)
-2. The provider redirects back to `GET /callback?code=...&state=...`
-   - The server takes the verifier by `state`, deletes it to prevent replay, then exchanges the code
+   - `?redirect_uri=` picks a redirect URL from `OAUTH2_ALLOWED_REDIRECT_URLS`; omitted: `OAUTH2_REDIRECT_URL`
+   - The server generates a PKCE verifier and stores it with the redirect URL under a one-time `state` (Redis if `REDIS_URL` is set, otherwise memory)
+2. The provider redirects to the redirect URL, whose page passes `code` and `state` to `GET /callback?code=...&state=...`
+   - The server takes the verifier and redirect URL by `state`, deletes it to prevent replay, then exchanges the code
 3. In session modes, the server reads the email, creates a device session, sets the `refresh_token` cookie, and returns both tokens
 
 Optional `/callback` request headers:

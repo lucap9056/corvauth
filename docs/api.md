@@ -8,7 +8,7 @@
 | Endpoint | Available in | Input | Success |
 |---|---|---|---|
 | [`GET /health`](#get-health) | all modes | — | `200` |
-| [`GET /login`](#get-login) | all modes | — | `200` |
+| [`GET /login`](#get-login) | all modes | `redirect_uri` query (optional) | `200` |
 | [`GET /callback`](#get-callback) | all modes | `code`, `state` query | `200` |
 | [`POST /refresh`](#post-refresh) | session modes | `refresh_token` cookie or body | `200`, sets cookie |
 | [`POST /refresh-access`](#post-refresh-access) | session modes | `refresh_token` cookie or body | `200` |
@@ -27,6 +27,8 @@ OK
 ```
 
 ## `GET /login`
+
+- `redirect_uri`: must exactly match `OAUTH2_REDIRECT_URL` or an entry in `OAUTH2_ALLOWED_REDIRECT_URLS`, otherwise `400`; omitted: `OAUTH2_REDIRECT_URL`, or `400` when unset
 
 ```json
 {

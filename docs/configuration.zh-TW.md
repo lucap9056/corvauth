@@ -19,7 +19,9 @@
 
 | 變數 | 說明 |
 |---|---|
-| `OAUTH2_CLIENT_ID`、`OAUTH2_CLIENT_SECRET`、`OAUTH2_REDIRECT_URL` | Client credentials 與 redirect URL，三者都設才啟用 OAuth2.0 |
+| `OAUTH2_CLIENT_ID`、`OAUTH2_CLIENT_SECRET` | Client credentials，兩者都設且設定 `OAUTH2_REDIRECT_URL` 或 `OAUTH2_ALLOWED_REDIRECT_URLS` 才啟用 OAuth2.0 |
+| `OAUTH2_REDIRECT_URL` | `/login` 未帶 `redirect_uri` 時的預設 redirect URL |
+| `OAUTH2_ALLOWED_REDIRECT_URLS` | 逗號分隔，`/login` 可透過 `redirect_uri` 指定的 redirect URL，須完全相同；每個也都要在 provider 註冊 |
 | `OAUTH2_PROVIDER` | `discord`、`github`、`google`，或其他名稱（generic） |
 | `OAUTH2_SCOPES` | 逗號分隔的 scope |
 | `OAUTH2_AUTH_URL`、`OAUTH2_TOKEN_URL`、`OAUTH2_USERINFO_URL` | Generic provider 必填 |

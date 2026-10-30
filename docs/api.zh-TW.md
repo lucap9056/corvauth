@@ -8,7 +8,7 @@
 | Endpoint | 提供於 | 輸入 | 成功時 |
 |---|---|---|---|
 | [`GET /health`](#get-health) | 所有模式 | — | `200` |
-| [`GET /login`](#get-login) | 所有模式 | — | `200` |
+| [`GET /login`](#get-login) | 所有模式 | `redirect_uri` query（選填） | `200` |
 | [`GET /callback`](#get-callback) | 所有模式 | `code`、`state` query | `200` |
 | [`POST /refresh`](#post-refresh) | session 模式 | `refresh_token` cookie 或 body | `200`，設定 cookie |
 | [`POST /refresh-access`](#post-refresh-access) | session 模式 | `refresh_token` cookie 或 body | `200` |
@@ -27,6 +27,8 @@ OK
 ```
 
 ## `GET /login`
+
+- `redirect_uri`：必須與 `OAUTH2_REDIRECT_URL` 或 `OAUTH2_ALLOWED_REDIRECT_URLS` 其中一項完全相同，否則 `400`；未帶時使用 `OAUTH2_REDIRECT_URL`，未設定則 `400`
 
 ```json
 {

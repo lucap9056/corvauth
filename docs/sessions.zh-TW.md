@@ -3,9 +3,10 @@
 ## 登入流程
 
 1. `GET /login` 回傳 `{ "url": "..." }`，將使用者導向 `url`
-   - Server 產生 PKCE verifier，以一次性 `state` 為 key 儲存（有 `REDIS_URL` 存 Redis，否則存記憶體）
-2. Provider 導回 `GET /callback?code=...&state=...`
-   - Server 用 `state` 取出 verifier 後立即刪除，防止重放，再交換 code
+   - `?redirect_uri=` 可從 `OAUTH2_ALLOWED_REDIRECT_URLS` 擇一作為 redirect URL，未帶時使用 `OAUTH2_REDIRECT_URL`
+   - Server 產生 PKCE verifier，連同 redirect URL 以一次性 `state` 為 key 儲存（有 `REDIS_URL` 存 Redis，否則存記憶體）
+2. Provider 導向 redirect URL，該頁面將 `code`、`state` 帶到 `GET /callback?code=...&state=...`
+   - Server 用 `state` 取出 verifier 與 redirect URL 後立即刪除，防止重放，再交換 code
 3. Session 模式下，server 取得 email、建立 device session、設定 `refresh_token` cookie，回傳兩個 token
 
 `/callback` 可選的 request header：
