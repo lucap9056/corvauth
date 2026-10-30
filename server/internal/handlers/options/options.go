@@ -16,10 +16,12 @@ type UsersDB interface {
 }
 
 type Options struct {
-	DevMode           bool
-	AllowRegistration bool
-	PassOAuthToken    bool
-	ClientPKCE        bool
+	DevMode             bool
+	AllowRegistration   bool
+	PassOAuthToken      bool
+	ClientPKCE          bool
+	DefaultRedirectURL  string
+	AllowedRedirectURLs []string
 }
 
 type Option func(*Options)
@@ -52,4 +54,11 @@ func WithPassOAuthToken(enabled bool) Option {
 
 func WithClientPKCE(enabled bool) Option {
 	return func(c *Options) { c.ClientPKCE = enabled }
+}
+
+func WithRedirectURLs(defaultURL string, allowed []string) Option {
+	return func(c *Options) {
+		c.DefaultRedirectURL = defaultURL
+		c.AllowedRedirectURLs = allowed
+	}
 }

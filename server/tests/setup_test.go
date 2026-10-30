@@ -28,6 +28,9 @@ type oauthStub struct {
 	UserID string
 	Email  string
 	Name   string
+
+	mu                  sync.Mutex
+	exchangeRedirectURI string
 }
 
 func newOAuthStub(userID, email, name string) *oauthStub {
@@ -53,7 +56,11 @@ func (s *oauthStub) handleDiscovery(w http.ResponseWriter, _ *http.Request) {
 	})
 }
 
-func (s *oauthStub) handleToken(w http.ResponseWriter, _ *http.Request) {
+func (s *oauthStub) handleToken(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	s.mu.Lock()
+	s.exchangeRedirectURI = r.PostForm.Get("redirect_uri")
+	s.mu.Unlock()
 	w.Header().Set("Content-Type", "application/json")
 	json.MarshalWrite(w, map[string]any{
 		"access_token":  "stub-access-token",
@@ -61,6 +68,12 @@ func (s *oauthStub) handleToken(w http.ResponseWriter, _ *http.Request) {
 		"token_type":    "Bearer",
 		"expires_in":    3600,
 	})
+}
+
+func (s *oauthStub) lastExchangeRedirectURI() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.exchangeRedirectURI
 }
 
 func (s *oauthStub) handleUserInfo(w http.ResponseWriter, _ *http.Request) {
@@ -76,6 +89,8 @@ func (s *oauthStub) handleUserInfo(w http.ResponseWriter, _ *http.Request) {
 func (s *oauthStub) handleRevoke(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
+
+const testRedirectURL = "http://localhost/callback"
 
 // mockDB implements options.DB and jwt.Database using in-memory maps.
 type mockDB struct {
@@ -227,7 +242,7 @@ func newTestEnv(stub *oauthStub, db *mockDB, opts ...options.Option) *testEnv {
 		Provider:     "generic",
 		ClientID:     "test-client",
 		ClientSecret: "test-secret",
-		RedirectURL:  "http://localhost/callback",
+		RedirectURL:  testRedirectURL,
 		AuthURL:      stub.URL + "/authorize",
 		TokenURL:     stub.URL + "/token",
 		UserinfoURL:  stub.URL + "/userinfo",
@@ -243,7 +258,7 @@ func newOIDCTestEnv(t *testing.T, stub *oauthStub, db *mockDB, opts ...options.O
 		IssuerURL:    stub.URL,
 		ClientID:     "test-client",
 		ClientSecret: "test-secret",
-		RedirectURL:  "http://localhost/callback",
+		RedirectURL:  testRedirectURL,
 		Scopes:       []string{"email"},
 	})
 	if err != nil {
@@ -284,7 +299,7 @@ func newTestEnvWithIdentity(stub *oauthStub, db *mockDB, oauth2Client login.OAut
 		Flight:         flightGroup,
 		StateCache:     stateCache,
 		OAuth2Client:   oauth2Client,
-		Options:        opts,
+		Options:        append([]options.Option{options.WithRedirectURLs(testRedirectURL, nil)}, opts...),
 	})
 
 	return &testEnv{stub: stub, db: db, jwtManager: jwtManager, mux: mux}

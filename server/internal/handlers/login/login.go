@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"time"
 
 	"github.com/lucap9056/corvauth/database"
@@ -86,21 +87,39 @@ func generateDeviceSecret() string {
 
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 
+	requestedRedirectURL := r.URL.Query().Get("redirect_uri")
+	if requestedRedirectURL == "" && h.options.DefaultRedirectURL == "" {
+		response.JSON(w, false, "Missing redirect_uri parameter", http.StatusBadRequest, nil)
+		return
+	}
+	redirectURL, allowed := h.resolveRedirectURL(requestedRedirectURL)
+	if !allowed {
+		response.JSON(w, false, "redirect_uri is not allowed", http.StatusBadRequest, nil)
+		return
+	}
+
 	verifier := oauth2.GenerateVerifier()
 	stateVal := generateState()
 
-	session := state.Session{Verifier: verifier}
+	session := state.Session{Verifier: verifier, RedirectURL: redirectURL}
 	if err := h.stateCache.Set(r.Context(), stateVal, session); err != nil {
 		response.JSON(w, false, "Failed to initialize login session", http.StatusInternalServerError, err)
 		return
 	}
 
-	url := h.oauth2Client.AuthURL(stateVal, verifier, session.RedirectURL)
+	url := h.oauth2Client.AuthURL(stateVal, verifier, redirectURL)
 	resp := &LoginResponse{URL: url}
 	if h.options.ClientPKCE {
 		resp.Verifier = verifier
 	}
 	response.NoStoreJSON(w, true, resp, http.StatusOK)
+}
+
+func (h *Handler) resolveRedirectURL(requested string) (string, bool) {
+	if requested == "" || requested == h.options.DefaultRedirectURL {
+		return "", true
+	}
+	return requested, slices.Contains(h.options.AllowedRedirectURLs, requested)
 }
 
 func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
