@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"regexp"
 	"strconv"
@@ -15,37 +16,38 @@ import (
 )
 
 const (
-	EnvHTTPAddress          = "HTTP_ADDRESS"
-	EnvHTTPMode             = "HTTP_MODE"
-	EnvDatabaseURL          = "DATABASE_URL"
-	EnvDBMaxOpenConns       = "DB_MAX_OPEN_CONNS"
-	EnvDBMaxIdleConns       = "DB_MAX_IDLE_CONNS"
-	EnvDBConnMaxLifetime    = "DB_CONN_MAX_LIFETIME"
-	EnvDBConnMaxIdleTime    = "DB_CONN_MAX_IDLE_TIME"
-	EnvDBCleanupInterval    = "DB_CLEANUP_INTERVAL"
-	EnvDBAutoCreateSchema   = "DB_AUTO_CREATE_SCHEMA"
-	EnvDBUserEmailReference = "DB_USER_EMAIL_REFERENCE"
-	EnvDBUserUsernameColumn = "DB_USER_USERNAME_COLUMN"
-	EnvJWTAccessDuration    = "JWT_ACCESS_TOKEN_DURATION"
-	EnvJWTRefreshDuration   = "JWT_REFRESH_TOKEN_DURATION"
-	EnvJWTIssuer            = "JWT_ISSUER"
-	EnvJWTAudience          = "JWT_AUDIENCE"
-	EnvIdentityJWTSecret    = "IDENTITY_JWT_SECRET"
-	EnvRedisURL             = "REDIS_URL"
-	EnvOAuth2Provider       = "OAUTH2_PROVIDER"
-	EnvOAuth2ClientID       = "OAUTH2_CLIENT_ID"
-	EnvOAuth2ClientSecret   = "OAUTH2_CLIENT_SECRET"
-	EnvOAuth2RedirectURL    = "OAUTH2_REDIRECT_URL"
-	EnvOAuth2AuthURL        = "OAUTH2_AUTH_URL"
-	EnvOAuth2TokenURL       = "OAUTH2_TOKEN_URL"
-	EnvOAuth2UserinfoURL    = "OAUTH2_USERINFO_URL"
-	EnvOAuth2RevokeURL      = "OAUTH2_REVOKE_URL"
-	EnvOAuth2Scopes         = "OAUTH2_SCOPES"
-	EnvOAuth2ClientPKCE     = "OAUTH2_CLIENT_PKCE"
-	EnvOIDCIssuerURL        = "OIDC_ISSUER_URL"
-	EnvAllowRegistration    = "ALLOW_REGISTRATION"
-	EnvPassOAuthToken       = "PASS_OAUTH_TOKEN"
-	EnvAllowUnverifiedEmail = "ALLOW_UNVERIFIED_EMAIL"
+	EnvHTTPAddress               = "HTTP_ADDRESS"
+	EnvHTTPMode                  = "HTTP_MODE"
+	EnvDatabaseURL               = "DATABASE_URL"
+	EnvDBMaxOpenConns            = "DB_MAX_OPEN_CONNS"
+	EnvDBMaxIdleConns            = "DB_MAX_IDLE_CONNS"
+	EnvDBConnMaxLifetime         = "DB_CONN_MAX_LIFETIME"
+	EnvDBConnMaxIdleTime         = "DB_CONN_MAX_IDLE_TIME"
+	EnvDBCleanupInterval         = "DB_CLEANUP_INTERVAL"
+	EnvDBAutoCreateSchema        = "DB_AUTO_CREATE_SCHEMA"
+	EnvDBUserEmailReference      = "DB_USER_EMAIL_REFERENCE"
+	EnvDBUserUsernameColumn      = "DB_USER_USERNAME_COLUMN"
+	EnvJWTAccessDuration         = "JWT_ACCESS_TOKEN_DURATION"
+	EnvJWTRefreshDuration        = "JWT_REFRESH_TOKEN_DURATION"
+	EnvJWTIssuer                 = "JWT_ISSUER"
+	EnvJWTAudience               = "JWT_AUDIENCE"
+	EnvIdentityJWTSecret         = "IDENTITY_JWT_SECRET"
+	EnvRedisURL                  = "REDIS_URL"
+	EnvOAuth2Provider            = "OAUTH2_PROVIDER"
+	EnvOAuth2ClientID            = "OAUTH2_CLIENT_ID"
+	EnvOAuth2ClientSecret        = "OAUTH2_CLIENT_SECRET"
+	EnvOAuth2RedirectURL         = "OAUTH2_REDIRECT_URL"
+	EnvOAuth2AllowedRedirectURLs = "OAUTH2_ALLOWED_REDIRECT_URLS"
+	EnvOAuth2AuthURL             = "OAUTH2_AUTH_URL"
+	EnvOAuth2TokenURL            = "OAUTH2_TOKEN_URL"
+	EnvOAuth2UserinfoURL         = "OAUTH2_USERINFO_URL"
+	EnvOAuth2RevokeURL           = "OAUTH2_REVOKE_URL"
+	EnvOAuth2Scopes              = "OAUTH2_SCOPES"
+	EnvOAuth2ClientPKCE          = "OAUTH2_CLIENT_PKCE"
+	EnvOIDCIssuerURL             = "OIDC_ISSUER_URL"
+	EnvAllowRegistration         = "ALLOW_REGISTRATION"
+	EnvPassOAuthToken            = "PASS_OAUTH_TOKEN"
+	EnvAllowUnverifiedEmail      = "ALLOW_UNVERIFIED_EMAIL"
 
 	DefaultHTTPAddress = ":80"
 	ModeDevelopment    = "development"
@@ -61,7 +63,8 @@ const (
 )
 
 var (
-	ErrOIDCMissingClient          = errors.New("OIDC_ISSUER_URL requires OAUTH2_CLIENT_ID, OAUTH2_CLIENT_SECRET, and OAUTH2_REDIRECT_URL")
+	ErrOIDCMissingClient          = errors.New("OIDC_ISSUER_URL requires OAUTH2_CLIENT_ID, OAUTH2_CLIENT_SECRET, and OAUTH2_REDIRECT_URL or OAUTH2_ALLOWED_REDIRECT_URLS")
+	ErrInvalidRedirectURL         = errors.New("redirect URL must be absolute and have no fragment")
 	ErrGenericProviderMissingURLs = errors.New("generic OAuth2 provider requires AUTH_URL, TOKEN_URL, and USERINFO_URL")
 	ErrInvalidInteger             = errors.New("invalid integer")
 	ErrNonPositiveDuration        = errors.New("duration must be positive")
@@ -122,10 +125,11 @@ type OAuth2 struct {
 }
 
 type Client struct {
-	ID          string
-	Secret      string
-	RedirectURL string
-	PKCE        bool
+	ID                  string
+	Secret              string
+	RedirectURL         string
+	AllowedRedirectURLs []string
+	PKCE                bool
 }
 
 type OIDC struct {
@@ -240,18 +244,27 @@ func loadRedis() *Redis {
 
 func loadOAuth2(env *envReader) *OAuth2 {
 	client := &Client{
-		ID:          os.Getenv(EnvOAuth2ClientID),
-		Secret:      os.Getenv(EnvOAuth2ClientSecret),
-		RedirectURL: os.Getenv(EnvOAuth2RedirectURL),
-		PKCE:        isTrue(EnvOAuth2ClientPKCE),
+		ID:                  os.Getenv(EnvOAuth2ClientID),
+		Secret:              os.Getenv(EnvOAuth2ClientSecret),
+		RedirectURL:         os.Getenv(EnvOAuth2RedirectURL),
+		AllowedRedirectURLs: splitList(os.Getenv(EnvOAuth2AllowedRedirectURLs)),
+		PKCE:                isTrue(EnvOAuth2ClientPKCE),
 	}
 	issuerURL := os.Getenv(EnvOIDCIssuerURL)
 
-	if client.ID == "" || client.Secret == "" || client.RedirectURL == "" {
+	hasRedirectURL := client.RedirectURL != "" || len(client.AllowedRedirectURLs) > 0
+	if client.ID == "" || client.Secret == "" || !hasRedirectURL {
 		if issuerURL != "" {
 			env.fail(ErrOIDCMissingClient)
 		}
 		return nil
+	}
+
+	if client.RedirectURL != "" {
+		env.redirectURL(EnvOAuth2RedirectURL, client.RedirectURL)
+	}
+	for _, allowed := range client.AllowedRedirectURLs {
+		env.redirectURL(EnvOAuth2AllowedRedirectURLs, allowed)
 	}
 
 	oauth2 := &OAuth2{
@@ -284,6 +297,13 @@ type envReader struct {
 
 func (r *envReader) fail(err error) {
 	r.errs = errors.Join(r.errs, err)
+}
+
+func (r *envReader) redirectURL(key, raw string) {
+	parsed, err := url.Parse(raw)
+	if err != nil || !parsed.IsAbs() || strings.Contains(raw, "#") {
+		r.fail(fmt.Errorf("%s: %q: %w", key, raw, ErrInvalidRedirectURL))
+	}
 }
 
 func (r *envReader) integer(key string, fallback int) int {

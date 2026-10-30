@@ -125,6 +125,9 @@ func run(life *lifecycle.Coordinator) error {
 		options.WithPassOAuthToken(cfg.Auth.PassOAuthToken),
 		options.WithClientPKCE(cfg.OAuth2 != nil && cfg.OAuth2.Client.PKCE),
 	}
+	if cfg.OAuth2 != nil {
+		authOptions = append(authOptions, options.WithRedirectURLs(cfg.OAuth2.Client.RedirectURL, cfg.OAuth2.Client.AllowedRedirectURLs))
+	}
 
 	mux := http.NewServeMux()
 

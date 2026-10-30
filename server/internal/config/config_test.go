@@ -14,7 +14,7 @@ var allEnvKeys = []string{
 	EnvDBMaxOpenConns, EnvDBMaxIdleConns, EnvDBConnMaxLifetime, EnvDBConnMaxIdleTime, EnvDBCleanupInterval,
 	EnvDBAutoCreateSchema, EnvDBUserEmailReference, EnvDBUserUsernameColumn,
 	EnvJWTAccessDuration, EnvJWTRefreshDuration, EnvJWTIssuer, EnvJWTAudience, EnvIdentityJWTSecret,
-	EnvOAuth2Provider, EnvOAuth2ClientID, EnvOAuth2ClientSecret, EnvOAuth2RedirectURL,
+	EnvOAuth2Provider, EnvOAuth2ClientID, EnvOAuth2ClientSecret, EnvOAuth2RedirectURL, EnvOAuth2AllowedRedirectURLs,
 	EnvOAuth2AuthURL, EnvOAuth2TokenURL, EnvOAuth2UserinfoURL, EnvOAuth2RevokeURL,
 	EnvOAuth2Scopes, EnvOAuth2ClientPKCE, EnvOIDCIssuerURL,
 	EnvAllowRegistration, EnvPassOAuthToken, EnvAllowUnverifiedEmail,
@@ -224,6 +224,30 @@ func TestLoad_OIDCTakesPrecedence(t *testing.T) {
 	}
 }
 
+func TestLoad_AllowedRedirectURLsWithoutDefault(t *testing.T) {
+	setEnv(t, map[string]string{
+		EnvOAuth2ClientID:            "client-id",
+		EnvOAuth2ClientSecret:        "client-secret",
+		EnvOAuth2Provider:            "github",
+		EnvOAuth2AllowedRedirectURLs: " https://a.example/callback , com.example.app:/oauth2redirect ",
+	})
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.OAuth2 == nil {
+		t.Fatal("OAuth2: got nil, want enabled")
+	}
+	if cfg.OAuth2.Client.RedirectURL != "" {
+		t.Errorf("RedirectURL: got %q, want empty", cfg.OAuth2.Client.RedirectURL)
+	}
+	want := []string{"https://a.example/callback", "com.example.app:/oauth2redirect"}
+	if !slices.Equal(cfg.OAuth2.Client.AllowedRedirectURLs, want) {
+		t.Errorf("AllowedRedirectURLs: got %q, want %q", cfg.OAuth2.Client.AllowedRedirectURLs, want)
+	}
+}
+
 func TestLoad_Validation(t *testing.T) {
 	cases := []struct {
 		name        string
@@ -239,6 +263,31 @@ func TestLoad_Validation(t *testing.T) {
 			name:        "oidc with client",
 			env:         setClientEnv(map[string]string{EnvOIDCIssuerURL: "https://issuer.example.com"}),
 			expectedErr: nil,
+		},
+		{
+			name: "oidc with allowed redirect urls only",
+			env: map[string]string{
+				EnvOIDCIssuerURL:             "https://issuer.example.com",
+				EnvOAuth2ClientID:            "client-id",
+				EnvOAuth2ClientSecret:        "client-secret",
+				EnvOAuth2AllowedRedirectURLs: "https://a.example/callback",
+			},
+			expectedErr: nil,
+		},
+		{
+			name: "relative redirect url",
+			env: map[string]string{
+				EnvOAuth2Provider:     "github",
+				EnvOAuth2ClientID:     "client-id",
+				EnvOAuth2ClientSecret: "client-secret",
+				EnvOAuth2RedirectURL:  "/callback",
+			},
+			expectedErr: ErrInvalidRedirectURL,
+		},
+		{
+			name:        "allowed redirect url with fragment",
+			env:         setClientEnv(map[string]string{EnvOAuth2Provider: "github", EnvOAuth2AllowedRedirectURLs: "https://a.example/callback#"}),
+			expectedErr: ErrInvalidRedirectURL,
 		},
 		{
 			name:        "generic without urls",
