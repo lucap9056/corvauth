@@ -26,15 +26,23 @@ Device-bound session 認證 server
 
 ## 快速開始
 
-啟動 PostgreSQL、Redis、假 OIDC provider 與 server（`http://localhost:8080`）：
+複製 [`docker/docker-compose.yml`](docker/docker-compose.yml)，替換 `change-me` 密碼、OAuth2.0 client credentials 與 redirect URL 後：
 
 ```bash
-docker compose -f docker/compose.yaml up --build -d
+docker compose up -d
 ```
 
-Compose 使用 **managed users** 模式並開啟註冊，假 provider 的任何使用者都能登入
+使用 image `ghcr.io/lucap9056/corvauth`，以 **managed users** 模式並開啟註冊，透過 GitHub 登入（其他 provider 見[設定](docs/configuration.zh-TW.md)）
 
-正式部署使用 image `ghcr.io/lucap9056/corvauth`，以環境變數設定（見[設定](docs/configuration.zh-TW.md)）
+### 開發
+
+從原始碼 build，啟動 PostgreSQL、Redis、假 OIDC provider 與 server（`http://localhost:8080`）：
+
+```bash
+docker compose -f docker-dev/docker-compose.yml up --build -d
+```
+
+假 provider 的任何使用者都能登入
 
 ## 部署模式
 
