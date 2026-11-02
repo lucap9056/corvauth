@@ -1,0 +1,54 @@
+name: corvauth
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: auth
+      POSTGRES_PASSWORD: change-me
+      POSTGRES_DB: auth
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U auth -d auth"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  corvauth:
+    image: ghcr.io/lucap9056/corvauth:0.4
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    environment:
+      DATABASE_URL: "postgres://auth:change-me@postgres:5432/auth?sslmode=disable"
+      DB_AUTO_CREATE_SCHEMA: "true"
+      REDIS_URL: "redis://redis:6379"
+      OAUTH2_PROVIDER: "github"
+      OAUTH2_CLIENT_ID: "your-client-id"
+      OAUTH2_CLIENT_SECRET: "your-client-secret"
+      OAUTH2_REDIRECT_URL: "https://auth.example.com/callback"
+      ALLOW_REGISTRATION: "true"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
