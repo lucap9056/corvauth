@@ -30,6 +30,7 @@ jobs:
               - "server/**"
               - "oauth2/**"
               - "docker/**"
+              - "docker-dev/**"
               - ".dockerignore"
               - ".github/workflows/ci-server.yml"
 
@@ -108,7 +109,7 @@ jobs:
           cache-dependency-path: server/go.sum
 
       - name: Start stack
-        run: docker compose -f ../docker/compose.yaml up --build --detach --wait
+        run: docker compose -f ../docker-dev/docker-compose.yml up --build --detach --wait
 
       - name: Wait for middleware
         run: |
@@ -126,11 +127,11 @@ jobs:
 
       - name: Dump logs
         if: failure()
-        run: docker compose -f ../docker/compose.yaml logs
+        run: docker compose -f ../docker-dev/docker-compose.yml logs
 
       - name: Stop stack
         if: always()
-        run: docker compose -f ../docker/compose.yaml down --volumes
+        run: docker compose -f ../docker-dev/docker-compose.yml down --volumes
 
   server-required:
     if: always()

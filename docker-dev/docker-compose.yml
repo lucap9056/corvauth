@@ -71,7 +71,7 @@ volumes:
 
 # -------------------------------------------------------------------
 # Start:
-#   docker compose -f docker/compose.yaml up --build -d
+#   docker compose -f docker-dev/docker-compose.yml up --build -d
 #
 # Run E2E tests (in server/):
 #   go test -v ./tests/e2e/
