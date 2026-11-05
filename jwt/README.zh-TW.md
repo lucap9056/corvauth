@@ -113,22 +113,24 @@ Refresh token，`typ`：`refresh+jwt`
 `VerifyAccess`、`VerifyRefresh`、`GenerateAccess`（驗證傳入的 refresh token）依序檢查：
 
 1. `typ` 符合 token 種類（不分大小寫，可帶 `application/` 前綴）
-2. `exp` 未過期（在驗證簽章前讀取）
-3. 有設 `WithDeviceTagSecret` 時，`device_tag` 與 `device_id`、`exp` 相符；沒有 `device_tag` 或 `exp` 的 token 一律拒絕
-4. 透過 `GetDeviceSecret` 向 database 讀取 device，確認是否存在
-5. 簽章正確且未過期
-6. 有設 `WithIssuer` / `WithAudience` 時，`iss` / `aud` 相符
-7. token 的 `generation` 等於 device 目前的 generation
+2. `alg` 為 `HS256`
+3. `exp` 未過期（在驗證簽章前讀取）
+4. 有設 `WithDeviceTagSecret` 時，`device_tag` 與 `device_id`、`exp` 相符；沒有 `device_tag` 或 `exp` 的 token 一律拒絕
+5. 透過 `GetDeviceSecret` 向 database 讀取 device，確認是否存在
+6. 簽章正確且未過期
+7. 有設 `WithIssuer` / `WithAudience` 時，`iss` / `aud` 相符
+8. token 的 `generation` 等於 device 目前的 generation
 
 ### Errors
 
 | Error | 情況 |
 |---|---|
-| `ErrTokenRevoked` | 只有第 7 項不符：由此服務簽發但已被 rotate |
-| `ErrInvalidDeviceTag` | 第 3 項不符 |
+| `ErrTokenRevoked` | 只有第 8 項不符：由此服務簽發但已被 rotate |
+| `ErrUnexpectedSigningMethod` | 第 2 項不符，包含未知或未指定的 `alg` |
+| `ErrInvalidDeviceTag` | 第 4 項不符 |
 | `ErrInvalidToken` | 其餘驗證失敗 |
 
-`ErrTokenRevoked`、`ErrInvalidDeviceTag` 皆 wrap 了 `ErrInvalidToken`，`errors.Is(err, jwt.ErrInvalidToken)` 對三者皆成立
+`ErrTokenRevoked`、`ErrUnexpectedSigningMethod`、`ErrInvalidDeviceTag` 皆 wrap 了 `ErrInvalidToken`，`errors.Is(err, jwt.ErrInvalidToken)` 對四者皆成立
 
 需要區分時先判斷 `ErrTokenRevoked`
 

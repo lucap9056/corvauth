@@ -113,22 +113,24 @@ Refresh token, `typ`: `refresh+jwt`
 `VerifyAccess`, `VerifyRefresh`, and `GenerateAccess` (on the given refresh token) check, in order:
 
 1. `typ` matches the token kind (case-insensitive, optional `application/` prefix)
-2. `exp`, read before the signature is checked, has not passed
-3. `device_tag` matches `device_id` and `exp` when `WithDeviceTagSecret` is set; tokens without it or without `exp` are rejected
-4. The device is read from the database through `GetDeviceSecret` and exists
-5. The signature is valid and not expired
-6. `iss` / `aud` match when `WithIssuer` / `WithAudience` are set
-7. The token's `generation` equals the device's current generation
+2. `alg` is `HS256`
+3. `exp`, read before the signature is checked, has not passed
+4. `device_tag` matches `device_id` and `exp` when `WithDeviceTagSecret` is set; tokens without it or without `exp` are rejected
+5. The device is read from the database through `GetDeviceSecret` and exists
+6. The signature is valid and not expired
+7. `iss` / `aud` match when `WithIssuer` / `WithAudience` are set
+8. The token's `generation` equals the device's current generation
 
 ### Errors
 
 | Error | When |
 |---|---|
-| `ErrTokenRevoked` | Only check 7 fails: issued here but since rotated |
-| `ErrInvalidDeviceTag` | Check 3 fails |
+| `ErrTokenRevoked` | Only check 8 fails: issued here but since rotated |
+| `ErrUnexpectedSigningMethod` | Check 2 fails, including an unknown or missing `alg` |
+| `ErrInvalidDeviceTag` | Check 4 fails |
 | `ErrInvalidToken` | Any other failure |
 
-`ErrTokenRevoked` and `ErrInvalidDeviceTag` wrap `ErrInvalidToken`, so `errors.Is(err, jwt.ErrInvalidToken)` holds for all of them
+`ErrTokenRevoked`, `ErrUnexpectedSigningMethod`, and `ErrInvalidDeviceTag` wrap `ErrInvalidToken`, so `errors.Is(err, jwt.ErrInvalidToken)` holds for all of them
 
 Check `ErrTokenRevoked` first to tell them apart
 
