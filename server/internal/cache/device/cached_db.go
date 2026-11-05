@@ -71,7 +71,7 @@ func (c *CachedDB) DeleteDevice(userEmail, deviceID string) error {
 }
 
 func (c *CachedDB) DeleteAllDevices(userEmail string) error {
-	ids, err := c.Database.DeleteAllDevicesReturningIDs(userEmail)
+	ids, err := c.Database.DeleteAllDevices(userEmail)
 	if err != nil {
 		return err
 	}
