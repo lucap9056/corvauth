@@ -3,9 +3,9 @@ package session
 import (
 	"log"
 	"net/http"
-	"strings"
 
 	"github.com/lucap9056/corvauth/jwt"
+	"github.com/lucap9056/corvauth/server/internal/handlers/bearer"
 	"github.com/lucap9056/corvauth/server/internal/handlers/options"
 	"github.com/lucap9056/corvauth/server/internal/handlers/refreshtoken"
 	"github.com/lucap9056/corvauth/server/internal/handlers/response"
@@ -30,25 +30,25 @@ func New(db options.DB, usersDB options.UsersDB, jwtManager *jwt.JWTManager, ide
 	}
 }
 
-func bearerToken(r *http.Request) (string, bool) {
-	scheme, token, found := strings.Cut(r.Header.Get("Authorization"), " ")
-	if !found || !strings.EqualFold(scheme, "Bearer") {
-		return "", false
-	}
-	return token, true
-}
-
-func (h *Handler) Verify(w http.ResponseWriter, r *http.Request) {
-	tokenStr, ok := bearerToken(r)
+func (h *Handler) authenticate(w http.ResponseWriter, r *http.Request) (*jwt.AccessClaims, bool) {
+	tokenStr, ok := bearer.Token(r)
 	if !ok {
 		response.Unauthorized(w, response.BearerChallenge, "Missing Bearer token", nil)
-		return
+		return nil, false
 	}
 
 	claims, err := h.jwtManager.VerifyAccess(tokenStr)
 	if err != nil {
 		response.SetAuthError(w, err)
 		response.Unauthorized(w, response.InvalidTokenChallenge, "Invalid access token", err)
+		return nil, false
+	}
+	return claims, true
+}
+
+func (h *Handler) Verify(w http.ResponseWriter, r *http.Request) {
+	claims, ok := h.authenticate(w, r)
+	if !ok {
 		return
 	}
 
@@ -70,7 +70,7 @@ func (h *Handler) Verify(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) VerifyOptional(w http.ResponseWriter, r *http.Request) {
-	if _, ok := bearerToken(r); !ok {
+	if _, ok := bearer.Token(r); !ok {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
@@ -95,16 +95,8 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) DeleteMe(w http.ResponseWriter, r *http.Request) {
-	tokenStr, ok := bearerToken(r)
+	claims, ok := h.authenticate(w, r)
 	if !ok {
-		response.Unauthorized(w, response.BearerChallenge, "Missing Bearer token", nil)
-		return
-	}
-
-	claims, err := h.jwtManager.VerifyAccess(tokenStr)
-	if err != nil {
-		response.SetAuthError(w, err)
-		response.Unauthorized(w, response.InvalidTokenChallenge, "Invalid access token", err)
 		return
 	}
 
