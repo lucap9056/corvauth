@@ -73,31 +73,62 @@ claims, err := manager.VerifyAccess(accessToken)
 
 Both are signed with HS256 using the device secret; the JWS `typ` header marks their purpose (RFC 8725 §3.11)
 
-| Token | `typ` | Claims |
-|---|---|---|
-| Access token | `access+jwt` | `sub`, `user_email`, `username`, `device_id`, `generation`, `iss`, `aud`, `iat`, `exp` |
-| Refresh token | `refresh+jwt` | `sub`, `device_id`, `generation`, `iss`, `aud`, `iat`, `exp` |
+Access token, `typ`: `access+jwt`
 
-`sub` is the user's email
+```json
+{
+  "username": "alice",
+  "user_email": "alice@example.com",
+  "device_id": "6f1c2a9e-4b7d-4c1e-9a3f-2d8b5e7c0a14",
+  "device_tag": "Qk3x9vLm2Tn8YpR4sWc1hA",
+  "generation": 1,
+  "iss": "auth-service",
+  "sub": "alice@example.com",
+  "aud": ["web"],
+  "exp": 1762400700,
+  "iat": 1762399800
+}
+```
+
+Refresh token, `typ`: `refresh+jwt`
+
+```json
+{
+  "device_id": "6f1c2a9e-4b7d-4c1e-9a3f-2d8b5e7c0a14",
+  "device_tag": "hkwVBjACbjZU0JwM0yuWVQ",
+  "generation": 1,
+  "iss": "auth-service",
+  "sub": "alice@example.com",
+  "aud": ["web"],
+  "exp": 1763004600,
+  "iat": 1762399800
+}
+```
+
+- `sub` is the user's email
+- `device_tag`: present only when `WithDeviceTagSecret` is set - `BASE64URL( HMAC-SHA256(secret, device_id || uint64_be(exp))[16] )`
 
 ### Verification
 
 `VerifyAccess`, `VerifyRefresh`, and `GenerateAccess` (on the given refresh token) check, in order:
 
 1. `typ` matches the token kind (case-insensitive, optional `application/` prefix)
-2. The device exists
-3. The signature is valid and not expired
-4. `iss` / `aud` match when `WithIssuer` / `WithAudience` are set
-5. The token's `generation` equals the device's current generation
+2. `exp`, read before the signature is checked, has not passed
+3. `device_tag` matches `device_id` and `exp` when `WithDeviceTagSecret` is set; tokens without it or without `exp` are rejected
+4. The device is read from the database through `GetDeviceSecret` and exists
+5. The signature is valid and not expired
+6. `iss` / `aud` match when `WithIssuer` / `WithAudience` are set
+7. The token's `generation` equals the device's current generation
 
 ### Errors
 
 | Error | When |
 |---|---|
-| `ErrTokenRevoked` | Only check 5 fails: issued here but since rotated |
+| `ErrTokenRevoked` | Only check 7 fails: issued here but since rotated |
+| `ErrInvalidDeviceTag` | Check 3 fails |
 | `ErrInvalidToken` | Any other failure |
 
-`ErrTokenRevoked` wraps `ErrInvalidToken`, so `errors.Is(err, jwt.ErrInvalidToken)` holds for both
+`ErrTokenRevoked` and `ErrInvalidDeviceTag` wrap `ErrInvalidToken`, so `errors.Is(err, jwt.ErrInvalidToken)` holds for all of them
 
 Check `ErrTokenRevoked` first to tell them apart
 
@@ -109,6 +140,7 @@ Check `ErrTokenRevoked` first to tell them apart
 | `WithRefreshTokenDuration(d)` | `7d` | Refresh token lifetime |
 | `WithIssuer(iss)` | empty | Written to `iss`; must match when non-empty |
 | `WithAudience(aud)` | empty | Written to `aud`; must be contained when non-empty |
+| `WithDeviceTagSecret(secret)` | empty | Secret for `device_tag`; when empty, `device_tag` is neither written nor checked. Must be shared by all instances; changing it invalidates every issued token |
 
 ## Testing
 
