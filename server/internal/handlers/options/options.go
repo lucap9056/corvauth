@@ -1,9 +1,13 @@
 package options
 
-import "github.com/lucap9056/corvauth/server/internal/usersdb"
+import (
+	"github.com/lucap9056/corvauth/database"
+	"github.com/lucap9056/corvauth/server/internal/usersdb"
+)
 
 type DB interface {
 	SaveDeviceSecret(userEmail, deviceName, secret string) (string, error)
+	ListDevices(userEmail string) ([]database.UserDevice, error)
 	DeleteDevice(userEmail, deviceID string) error
 	DeleteAllDevices(userEmail string) error
 }

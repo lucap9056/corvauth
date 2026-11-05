@@ -77,6 +77,53 @@ func (h *Handler) VerifyOptional(w http.ResponseWriter, r *http.Request) {
 	h.Verify(w, r)
 }
 
+type Session struct {
+	DeviceID   string `json:"device_id"`
+	DeviceName string `json:"device_name"`
+	UpdatedAt  int64  `json:"updated_at"`
+	Current    bool   `json:"current"`
+}
+
+func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
+	claims, ok := h.authenticate(w, r)
+	if !ok {
+		return
+	}
+
+	devices, err := h.db.ListDevices(claims.UserEmail)
+	if err != nil {
+		response.JSON(w, false, "Failed to list sessions", http.StatusInternalServerError, err)
+		return
+	}
+
+	sessions := make([]Session, 0, len(devices))
+	for _, device := range devices {
+		sessions = append(sessions, Session{
+			DeviceID:   device.DeviceID,
+			DeviceName: device.DeviceName,
+			UpdatedAt:  device.UpdatedAt.Unix(),
+			Current:    device.DeviceID == claims.DeviceID,
+		})
+	}
+	response.NoStoreJSON(w, true, sessions, http.StatusOK)
+}
+
+func (h *Handler) DeleteAll(w http.ResponseWriter, r *http.Request) {
+	claims, ok := h.authenticate(w, r)
+	if !ok {
+		return
+	}
+
+	if err := h.db.DeleteAllDevices(claims.UserEmail); err != nil {
+		response.JSON(w, false, "Failed to remove device sessions", http.StatusInternalServerError, err)
+		return
+	}
+
+	refreshtoken.ClearCookie(w)
+
+	response.JSON(w, true, "Logged out from all sessions", http.StatusOK, nil)
+}
+
 func (h *Handler) DeleteCurrent(w http.ResponseWriter, r *http.Request) {
 	refreshToken, err := refreshtoken.FromRequest(r)
 	if err == nil {

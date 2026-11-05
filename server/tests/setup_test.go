@@ -105,6 +105,7 @@ type mockDB struct {
 
 type mockDevice struct {
 	owner      string
+	name       string
 	secret     string
 	generation int
 }
@@ -174,7 +175,7 @@ func (m *mockDB) DeleteUser(email string) error {
 	return nil
 }
 
-func (m *mockDB) SaveDeviceSecret(email, _, secret string) (string, error) {
+func (m *mockDB) SaveDeviceSecret(email, deviceName, secret string) (string, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if !m.users[email] {
@@ -182,7 +183,7 @@ func (m *mockDB) SaveDeviceSecret(email, _, secret string) (string, error) {
 	}
 	m.idCounter++
 	deviceID := fmt.Sprintf("device-%d", m.idCounter)
-	m.devices[deviceID] = &mockDevice{owner: email, secret: secret, generation: 1}
+	m.devices[deviceID] = &mockDevice{owner: email, name: deviceName, secret: secret, generation: 1}
 	return deviceID, nil
 }
 
@@ -205,6 +206,18 @@ func (m *mockDB) GetDeviceSecret(deviceID string) (string, int, error) {
 		return "", 0, jwt.ErrDeviceNotFound
 	}
 	return d.secret, d.generation, nil
+}
+
+func (m *mockDB) ListDevices(email string) ([]database.UserDevice, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	var devices []database.UserDevice
+	for id, d := range m.devices {
+		if d.owner == email {
+			devices = append(devices, database.UserDevice{DeviceID: id, DeviceName: d.name})
+		}
+	}
+	return devices, nil
 }
 
 func (m *mockDB) DeleteDevice(email, deviceID string) error {
