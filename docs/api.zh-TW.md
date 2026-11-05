@@ -262,3 +262,9 @@ Identity token 以 `HS256` 簽章，header `typ` 為 `identity+jwt`：
 | `invalid_signature` | Signature 與 device secret 不符 |
 | `invalid_device_tag` | Token 的 `device_tag` 與其 `device_id`、`exp` 不符（僅在設定 `JWT_DEVICE_TAG_SECRET` 時） |
 | `unexpected_algorithm` | Token 未以 `HS256` 簽章 |
+
+`GET /callback` 因 authorization response 的 `iss` 回 `400` 時會帶 `X-Auth-Error`：
+
+| 值 | 原因 |
+|---|---|
+| `invalid_issuer` | `iss` 與 provider 不符，或 provider 宣告支援卻缺少 `iss` |

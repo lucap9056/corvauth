@@ -262,3 +262,9 @@ When a `401` is caused by the device session, `/sessions/current/tokens`, `/sess
 | `invalid_signature` | The signature does not match the device secret |
 | `invalid_device_tag` | The token's `device_tag` does not match its `device_id` and `exp` (only when `JWT_DEVICE_TAG_SECRET` is set) |
 | `unexpected_algorithm` | The token is not signed with `HS256` |
+
+`GET /callback` adds `X-Auth-Error` to the `400` caused by the authorization response `iss`:
+
+| Value | Cause |
+|---|---|
+| `invalid_issuer` | `iss` does not match the provider, or is missing when the provider declares it |
