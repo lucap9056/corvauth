@@ -17,16 +17,16 @@ type Handler struct {
 	usersDB        options.UsersDB
 	jwtManager     *jwt.JWTManager
 	identitySigner *identity.Signer
+	headers        identity.Headers
 }
 
-const IdentityHeader = "X-Forwarded-Identity"
-
-func New(db options.DB, usersDB options.UsersDB, jwtManager *jwt.JWTManager, identitySigner *identity.Signer) *Handler {
+func New(db options.DB, usersDB options.UsersDB, jwtManager *jwt.JWTManager, identitySigner *identity.Signer, headers identity.Headers) *Handler {
 	return &Handler{
 		db:             db,
 		usersDB:        usersDB,
 		jwtManager:     jwtManager,
 		identitySigner: identitySigner,
+		headers:        headers,
 	}
 }
 
@@ -58,12 +58,12 @@ func (h *Handler) Verify(w http.ResponseWriter, r *http.Request) {
 			response.JSON(w, false, "Failed to sign identity token", http.StatusInternalServerError, err)
 			return
 		}
-		w.Header().Set(IdentityHeader, identityToken)
+		w.Header().Set(h.headers.Identity, identityToken)
 	} else {
-		w.Header().Set("X-Forwarded-User-Email", claims.UserEmail)
-		w.Header().Set("X-Forwarded-Device-ID", claims.DeviceID)
+		w.Header().Set(h.headers.UserEmail, claims.UserEmail)
+		w.Header().Set(h.headers.DeviceID, claims.DeviceID)
 		if claims.Username != "" {
-			w.Header().Set("X-Forwarded-Username", claims.Username)
+			w.Header().Set(h.headers.Username, claims.Username)
 		}
 	}
 	w.WriteHeader(http.StatusNoContent)

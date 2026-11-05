@@ -2,6 +2,7 @@ package options
 
 import (
 	"github.com/lucap9056/corvauth/database"
+	"github.com/lucap9056/corvauth/server/internal/identity"
 	"github.com/lucap9056/corvauth/server/internal/usersdb"
 )
 
@@ -26,12 +27,13 @@ type Options struct {
 	ClientPKCE          bool
 	DefaultRedirectURL  string
 	AllowedRedirectURLs []string
+	IdentityHeaders     identity.Headers
 }
 
 type Option func(*Options)
 
 func New(opts ...Option) *Options {
-	o := &Options{}
+	o := &Options{IdentityHeaders: identity.DefaultHeaders}
 	for _, opt := range opts {
 		opt(o)
 	}
@@ -58,6 +60,10 @@ func WithPassOAuthToken(enabled bool) Option {
 
 func WithClientPKCE(enabled bool) Option {
 	return func(c *Options) { c.ClientPKCE = enabled }
+}
+
+func WithIdentityHeaders(headers identity.Headers) Option {
+	return func(c *Options) { c.IdentityHeaders = headers }
 }
 
 func WithRedirectURLs(defaultURL string, allowed []string) Option {

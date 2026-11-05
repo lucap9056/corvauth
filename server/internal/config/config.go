@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"net/textproto"
 	"net/url"
 	"os"
 	"regexp"
@@ -54,6 +55,11 @@ const (
 	EnvAllowUnverifiedEmail = "ALLOW_UNVERIFIED_EMAIL"
 	EnvPassOAuthToken       = "PASS_OAUTH_TOKEN"
 
+	EnvIdentityHeader  = "IDENTITY_HEADER"
+	EnvUserEmailHeader = "USER_EMAIL_HEADER"
+	EnvDeviceIDHeader  = "DEVICE_ID_HEADER"
+	EnvUsernameHeader  = "USERNAME_HEADER"
+
 	DefaultHTTPAddress = ":80"
 	ModeDevelopment    = "development"
 	ModeProduction     = "production"
@@ -79,17 +85,23 @@ var (
 	ErrUsernameColumnWithoutRef   = errors.New("DB_USER_USERNAME_COLUMN requires DB_USER_EMAIL_REFERENCE")
 	ErrIdentitySecretTooShort     = fmt.Errorf("IDENTITY_JWT_SECRET must be at least %d bytes", identity.MinSecretLength)
 	ErrDeviceTagSecretTooShort    = fmt.Errorf("JWT_DEVICE_TAG_SECRET must be at least %d bytes", MinDeviceTagSecretLength)
+	ErrInvalidHeaderName          = errors.New("invalid header name")
+	ErrDuplicateHeaderName        = errors.New("duplicate header name")
 )
 
-var identifierPattern = regexp.MustCompile("^[a-z_][a-z0-9_]*$")
+var (
+	identifierPattern = regexp.MustCompile("^[a-z_][a-z0-9_]*$")
+	headerNamePattern = regexp.MustCompile("^[!#$%&'*+.^_`|~0-9A-Za-z-]+$")
+)
 
 type Config struct {
-	HTTP     *HTTP
-	Database *Database
-	JWT      *JWT
-	Redis    *Redis
-	OAuth2   *OAuth2
-	Auth     *Auth
+	HTTP            *HTTP
+	Database        *Database
+	JWT             *JWT
+	Redis           *Redis
+	OAuth2          *OAuth2
+	Auth            *Auth
+	IdentityHeaders identity.Headers
 }
 
 type HTTP struct {
@@ -175,6 +187,7 @@ func Load() (*Config, error) {
 			PassOAuthToken:       isTrue(EnvPassOAuthToken),
 			AllowUnverifiedEmail: isTrue(EnvAllowUnverifiedEmail),
 		},
+		IdentityHeaders: loadIdentityHeaders(env),
 	}
 
 	if env.errs != nil {
@@ -247,6 +260,20 @@ func loadJWT(env *envReader) *JWT {
 	return jwt
 }
 
+func loadIdentityHeaders(env *envReader) identity.Headers {
+	headers := identity.Headers{
+		Identity:  stringOr(EnvIdentityHeader, identity.DefaultHeaders.Identity),
+		UserEmail: stringOr(EnvUserEmailHeader, identity.DefaultHeaders.UserEmail),
+		DeviceID:  stringOr(EnvDeviceIDHeader, identity.DefaultHeaders.DeviceID),
+		Username:  stringOr(EnvUsernameHeader, identity.DefaultHeaders.Username),
+	}
+	env.headerNames(
+		[]string{EnvIdentityHeader, EnvUserEmailHeader, EnvDeviceIDHeader, EnvUsernameHeader},
+		headers.Names(),
+	)
+	return headers
+}
+
 func loadRedis() *Redis {
 	url := os.Getenv(EnvRedisURL)
 	if url == "" {
@@ -316,6 +343,22 @@ func (r *envReader) redirectURL(key, raw string) {
 	parsed, err := url.Parse(raw)
 	if err != nil || !parsed.IsAbs() || strings.Contains(raw, "#") {
 		r.fail(fmt.Errorf("%s: %q: %w", key, raw, ErrInvalidRedirectURL))
+	}
+}
+
+func (r *envReader) headerNames(keys, names []string) {
+	seen := make(map[string]string, len(keys))
+	for i, name := range names {
+		if !headerNamePattern.MatchString(name) {
+			r.fail(fmt.Errorf("%s: %w: %q", keys[i], ErrInvalidHeaderName, name))
+			continue
+		}
+		canonical := textproto.CanonicalMIMEHeaderKey(name)
+		if other, ok := seen[canonical]; ok {
+			r.fail(fmt.Errorf("%s: %w: %q is also used by %s", keys[i], ErrDuplicateHeaderName, name, other))
+			continue
+		}
+		seen[canonical] = keys[i]
 	}
 }
 

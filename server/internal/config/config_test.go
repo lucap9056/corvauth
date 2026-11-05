@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/lucap9056/corvauth/database/schema"
+	"github.com/lucap9056/corvauth/server/internal/identity"
 )
 
 var allEnvKeys = []string{
@@ -18,6 +19,7 @@ var allEnvKeys = []string{
 	EnvOAuth2AuthURL, EnvOAuth2TokenURL, EnvOAuth2UserinfoURL, EnvOAuth2RevokeURL,
 	EnvOAuth2Scopes, EnvOAuth2ClientPKCE, EnvOIDCIssuerURL,
 	EnvAllowRegistration, EnvPassOAuthToken, EnvAllowUnverifiedEmail,
+	EnvIdentityHeader, EnvUserEmailHeader, EnvDeviceIDHeader, EnvUsernameHeader,
 }
 
 func setEnv(t *testing.T, values map[string]string) {
@@ -58,6 +60,9 @@ func TestLoad_Defaults(t *testing.T) {
 	}
 	if cfg.Auth == nil || *cfg.Auth != (Auth{}) {
 		t.Errorf("Auth: got %+v, want zero value", cfg.Auth)
+	}
+	if cfg.IdentityHeaders != identity.DefaultHeaders {
+		t.Errorf("IdentityHeaders: got %+v, want %+v", cfg.IdentityHeaders, identity.DefaultHeaders)
 	}
 	expectedJWT := JWT{AccessTokenDuration: DefaultJWTAccessDuration, RefreshTokenDuration: DefaultJWTRefreshDuration}
 	if *cfg.JWT != expectedJWT {
@@ -358,6 +363,16 @@ func TestLoad_Validation(t *testing.T) {
 			name:        "short device tag secret",
 			env:         map[string]string{EnvJWTDeviceTagSecret: "too-short"},
 			expectedErr: ErrDeviceTagSecretTooShort,
+		},
+		{
+			name:        "invalid header name",
+			env:         map[string]string{EnvUserEmailHeader: "X-User Email"},
+			expectedErr: ErrInvalidHeaderName,
+		},
+		{
+			name:        "duplicate header name",
+			env:         map[string]string{EnvUserEmailHeader: "x-user", EnvUsernameHeader: "X-User"},
+			expectedErr: ErrDuplicateHeaderName,
 		},
 		{
 			name:        "builtin without urls",

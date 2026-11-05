@@ -37,7 +37,7 @@ func RegisterRoutes(mux *http.ServeMux, deps Dependencies) {
 		mux.HandleFunc("POST /sessions/current/access-token", refreshHandler.RefreshAccess)
 		mux.HandleFunc("GET /sessions/current", refreshHandler.RefreshStatus)
 
-		sessionHandler := session.New(deps.DB, deps.UsersDB, deps.JWTManager, deps.IdentitySigner)
+		sessionHandler := session.New(deps.DB, deps.UsersDB, deps.JWTManager, deps.IdentitySigner, opts.IdentityHeaders)
 		mux.HandleFunc("GET /verify", sessionHandler.Verify)
 		mux.HandleFunc("GET /verify-optional", sessionHandler.VerifyOptional)
 		mux.HandleFunc("GET /sessions", sessionHandler.List)

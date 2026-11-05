@@ -12,6 +12,24 @@ const (
 	TokenDuration   = time.Minute
 )
 
+type Headers struct {
+	Identity  string
+	UserEmail string
+	DeviceID  string
+	Username  string
+}
+
+var DefaultHeaders = Headers{
+	Identity:  "X-Corvauth-Identity",
+	UserEmail: "X-Corvauth-User-Email",
+	DeviceID:  "X-Corvauth-Device-ID",
+	Username:  "X-Corvauth-Username",
+}
+
+func (h Headers) Names() []string {
+	return []string{h.Identity, h.UserEmail, h.DeviceID, h.Username}
+}
+
 type Claims struct {
 	Username string `json:"username,omitempty"`
 	DeviceID string `json:"device_id"`

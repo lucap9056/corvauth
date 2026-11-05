@@ -6,11 +6,11 @@ import (
 	"testing"
 
 	"github.com/lucap9056/corvauth/jwt"
+	"github.com/lucap9056/corvauth/server/internal/identity"
 )
 
 func TestVerifyOptional(t *testing.T) {
-	h := New(nil, nil, jwt.NewJWTManager(nil), nil)
-	identityHeaders := []string{IdentityHeader, "X-Forwarded-User-Email", "X-Forwarded-Device-ID", "X-Forwarded-Username"}
+	h := New(nil, nil, jwt.NewJWTManager(nil), nil, identity.DefaultHeaders)
 
 	tests := []struct {
 		header     string
@@ -31,7 +31,7 @@ func TestVerifyOptional(t *testing.T) {
 		if w.Code != tt.wantStatus {
 			t.Errorf("VerifyOptional(%q) status = %d; want %d", tt.header, w.Code, tt.wantStatus)
 		}
-		for _, name := range identityHeaders {
+		for _, name := range identity.DefaultHeaders.Names() {
 			if v := w.Header().Get(name); v != "" {
 				t.Errorf("VerifyOptional(%q) set %s = %q; want none", tt.header, name, v)
 			}

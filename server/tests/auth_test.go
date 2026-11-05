@@ -15,7 +15,6 @@ import (
 	"github.com/lucap9056/corvauth/jwt"
 	"github.com/lucap9056/corvauth/server/internal/handlers/options"
 	"github.com/lucap9056/corvauth/server/internal/handlers/response"
-	"github.com/lucap9056/corvauth/server/internal/handlers/session"
 	"github.com/lucap9056/corvauth/server/internal/identity"
 )
 
@@ -556,8 +555,8 @@ func TestVerify_Valid(t *testing.T) {
 	if w.Code != http.StatusNoContent {
 		t.Fatalf("want 204, got %d: %s", w.Code, w.Body.String())
 	}
-	if got := w.Header().Get("X-Forwarded-User-Email"); got != email {
-		t.Errorf("X-Forwarded-User-Email: want %q, got %q", email, got)
+	if got := w.Header().Get(identity.DefaultHeaders.UserEmail); got != email {
+		t.Errorf("%s: want %q, got %q", identity.DefaultHeaders.UserEmail, email, got)
 	}
 }
 
@@ -851,8 +850,8 @@ func TestVerify_ForwardsUsername(t *testing.T) {
 	if w.Code != http.StatusNoContent {
 		t.Fatalf("want 204, got %d: %s", w.Code, w.Body.String())
 	}
-	if got := w.Header().Get("X-Forwarded-Username"); got != "Verify Name" {
-		t.Errorf("X-Forwarded-Username: want %q, got %q", "Verify Name", got)
+	if got := w.Header().Get(identity.DefaultHeaders.Username); got != "Verify Name" {
+		t.Errorf("%s: want %q, got %q", identity.DefaultHeaders.Username, "Verify Name", got)
 	}
 }
 
@@ -881,14 +880,14 @@ func TestVerify_IdentityToken(t *testing.T) {
 	if w.Code != http.StatusNoContent {
 		t.Fatalf("want 204, got %d: %s", w.Code, w.Body.String())
 	}
-	for _, header := range []string{"X-Forwarded-User-Email", "X-Forwarded-Username", "X-Forwarded-Device-ID"} {
+	for _, header := range []string{identity.DefaultHeaders.UserEmail, identity.DefaultHeaders.Username, identity.DefaultHeaders.DeviceID} {
 		if got := w.Header().Get(header); got != "" {
 			t.Errorf("%s: want empty, got %q", header, got)
 		}
 	}
 
 	claims := &identity.Claims{}
-	token, err := gojwt.ParseWithClaims(w.Header().Get(session.IdentityHeader), claims, func(*gojwt.Token) (any, error) {
+	token, err := gojwt.ParseWithClaims(w.Header().Get(identity.DefaultHeaders.Identity), claims, func(*gojwt.Token) (any, error) {
 		return []byte(secret), nil
 	}, gojwt.WithValidMethods([]string{gojwt.SigningMethodHS256.Alg()}))
 	if err != nil {
