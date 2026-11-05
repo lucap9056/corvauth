@@ -901,6 +901,54 @@ func TestVerify_IdentityToken(t *testing.T) {
 	}
 }
 
+func TestVerify_ForwardedIdentityHeaders(t *testing.T) {
+	const email = "forwarded@example.com"
+	headers := identity.DefaultHeaders
+
+	tests := []struct {
+		name       string
+		signer     *identity.Signer
+		forward    func(first *httptest.ResponseRecorder, req *http.Request)
+		wantStatus int
+	}{
+		{"plain matching", nil, func(first *httptest.ResponseRecorder, req *http.Request) {
+			req.Header.Set(headers.UserEmail, first.Header().Get(headers.UserEmail))
+			req.Header.Set(headers.DeviceID, first.Header().Get(headers.DeviceID))
+		}, http.StatusNoContent},
+		{"plain mismatched", nil, func(_ *httptest.ResponseRecorder, req *http.Request) {
+			req.Header.Set(headers.UserEmail, "victim@example.com")
+		}, http.StatusForbidden},
+		{"signed matching", identity.NewSigner("0123456789abcdef0123456789abcdef", "", ""), func(first *httptest.ResponseRecorder, req *http.Request) {
+			req.Header.Set(headers.Identity, first.Header().Get(headers.Identity))
+		}, http.StatusNoContent},
+		{"signed with plain header", identity.NewSigner("0123456789abcdef0123456789abcdef", "", ""), func(_ *httptest.ResponseRecorder, req *http.Request) {
+			req.Header.Set(headers.UserEmail, email)
+		}, http.StatusForbidden},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			stub := newOAuthStub("", "", "")
+			defer stub.Close()
+			db := newMockDB()
+			db.seedUser(email)
+			env := newTestEnvWithIdentity(stub, db, nil, tt.signer)
+			_, access := env.issueTokens(email, "device")
+
+			req := httptest.NewRequest(http.MethodGet, "/verify", nil)
+			req.Header.Set("Authorization", "Bearer "+access)
+			tt.forward(verifyWith(env, access), req)
+
+			w := env.do(req)
+			if w.Code != tt.wantStatus {
+				t.Fatalf("want %d, got %d: %s", tt.wantStatus, w.Code, w.Body.String())
+			}
+			if tt.wantStatus == http.StatusForbidden && w.Header().Get(response.AuthErrorHeader) != response.AuthErrorSpoofedIdentity {
+				t.Errorf("%s: want %q, got %q", response.AuthErrorHeader, response.AuthErrorSpoofedIdentity, w.Header().Get(response.AuthErrorHeader))
+			}
+		})
+	}
+}
+
 func TestCallback_UsernameLookupFailureCreatesNoDevice(t *testing.T) {
 	const email = "lookup-fail@example.com"
 

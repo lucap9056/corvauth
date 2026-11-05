@@ -45,6 +45,7 @@ const (
 	AuthErrorInvalidDeviceTag = "invalid_device_tag"
 	AuthErrorUnexpectedAlg    = "unexpected_algorithm"
 	AuthErrorInvalidIssuer    = "invalid_issuer"
+	AuthErrorSpoofedIdentity  = "spoofed_identity_header"
 )
 
 func SetAuthError(w http.ResponseWriter, err error) {

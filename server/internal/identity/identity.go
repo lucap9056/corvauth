@@ -1,6 +1,7 @@
 package identity
 
 import (
+	"errors"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -11,6 +12,8 @@ const (
 	MinSecretLength = 32
 	TokenDuration   = time.Minute
 )
+
+var ErrInvalidToken = errors.New("invalid identity token")
 
 type Headers struct {
 	Identity  string
@@ -72,4 +75,15 @@ func (s *Signer) Sign(userEmail, username, deviceID string, accessExpiresAt *jwt
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	token.Header["typ"] = TokenType
 	return token.SignedString(s.secret)
+}
+
+func (s *Signer) Verify(tokenStr string) (*Claims, error) {
+	claims := &Claims{}
+	token, err := jwt.ParseWithClaims(tokenStr, claims, func(*jwt.Token) (any, error) {
+		return s.secret, nil
+	}, jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}), jwt.WithoutClaimsValidation())
+	if err != nil || token.Header["typ"] != TokenType {
+		return nil, ErrInvalidToken
+	}
+	return claims, nil
 }

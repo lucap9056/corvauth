@@ -46,9 +46,71 @@ func (h *Handler) authenticate(w http.ResponseWriter, r *http.Request) (*jwt.Acc
 	return claims, true
 }
 
+func rejectSpoofedIdentity(w http.ResponseWriter) {
+	w.Header().Set(response.AuthErrorHeader, response.AuthErrorSpoofedIdentity)
+	response.JSON(w, false, "Identity headers do not match the access token", http.StatusForbidden, nil)
+}
+
+func (h *Handler) carriesIdentity(r *http.Request) bool {
+	for _, name := range h.headers.Names() {
+		if len(r.Header.Values(name)) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+func absent(r *http.Request, names ...string) bool {
+	for _, name := range names {
+		if len(r.Header.Values(name)) > 0 {
+			return false
+		}
+	}
+	return true
+}
+
+func absentOrEqual(r *http.Request, name, want string) bool {
+	values := r.Header.Values(name)
+	return len(values) == 0 || (len(values) == 1 && values[0] == want)
+}
+
+func (h *Handler) identityTokenMatches(r *http.Request, claims *jwt.AccessClaims) bool {
+	values := r.Header.Values(h.headers.Identity)
+	if len(values) == 0 {
+		return true
+	}
+	if len(values) > 1 {
+		return false
+	}
+	forwarded, err := h.identitySigner.Verify(values[0])
+	return err == nil &&
+		forwarded.Subject == claims.UserEmail &&
+		forwarded.DeviceID == claims.DeviceID &&
+		forwarded.Username == claims.Username
+}
+
+func (h *Handler) matchesClaims(r *http.Request, claims *jwt.AccessClaims) bool {
+	if h.identitySigner != nil {
+		return absent(r, h.headers.UserEmail, h.headers.DeviceID, h.headers.Username) && h.identityTokenMatches(r, claims)
+	}
+	return absent(r, h.headers.Identity) &&
+		absentOrEqual(r, h.headers.UserEmail, claims.UserEmail) &&
+		absentOrEqual(r, h.headers.DeviceID, claims.DeviceID) &&
+		absentOrEqual(r, h.headers.Username, claims.Username)
+}
+
 func (h *Handler) Verify(w http.ResponseWriter, r *http.Request) {
+	if _, ok := bearer.Token(r); !ok && h.carriesIdentity(r) {
+		rejectSpoofedIdentity(w)
+		return
+	}
+
 	claims, ok := h.authenticate(w, r)
 	if !ok {
+		return
+	}
+	if !h.matchesClaims(r, claims) {
+		rejectSpoofedIdentity(w)
 		return
 	}
 
@@ -70,11 +132,15 @@ func (h *Handler) Verify(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) VerifyOptional(w http.ResponseWriter, r *http.Request) {
-	if _, ok := bearer.Token(r); !ok {
-		w.WriteHeader(http.StatusNoContent)
+	if _, ok := bearer.Token(r); ok {
+		h.Verify(w, r)
 		return
 	}
-	h.Verify(w, r)
+	if h.carriesIdentity(r) {
+		rejectSpoofedIdentity(w)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 type Session struct {
