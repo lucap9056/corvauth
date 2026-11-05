@@ -43,6 +43,7 @@ const (
 	AuthErrorDeviceNotFound   = "device_not_found"
 	AuthErrorInvalidSignature = "invalid_signature"
 	AuthErrorInvalidDeviceTag = "invalid_device_tag"
+	AuthErrorUnexpectedAlg    = "unexpected_algorithm"
 )
 
 func SetAuthError(w http.ResponseWriter, err error) {
@@ -53,6 +54,8 @@ func SetAuthError(w http.ResponseWriter, err error) {
 		w.Header().Set(AuthErrorHeader, AuthErrorInvalidSignature)
 	case errors.Is(err, jwt.ErrInvalidDeviceTag):
 		w.Header().Set(AuthErrorHeader, AuthErrorInvalidDeviceTag)
+	case errors.Is(err, jwt.ErrUnexpectedSigningMethod):
+		w.Header().Set(AuthErrorHeader, AuthErrorUnexpectedAlg)
 	}
 }
 

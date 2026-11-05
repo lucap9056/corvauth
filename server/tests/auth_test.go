@@ -1020,6 +1020,21 @@ func TestAuthErrorHeader(t *testing.T) {
 	}
 }
 
+func TestAuthErrorHeader_UnexpectedAlgorithm(t *testing.T) {
+	stub := newOAuthStub("", "", "")
+	defer stub.Close()
+	env := newTestEnv(stub, newMockDB())
+
+	token := gojwt.NewWithClaims(gojwt.SigningMethodNone, gojwt.MapClaims{"device_id": "forged"})
+	token.Header["typ"] = jwt.AccessTokenType
+	unsigned, _ := token.SignedString(gojwt.UnsafeAllowNoneSignatureType)
+
+	w := verifyWith(env, unsigned)
+	if got := w.Header().Get(response.AuthErrorHeader); w.Code != http.StatusUnauthorized || got != response.AuthErrorUnexpectedAlg {
+		t.Errorf("want 401 %q, got %d %q", response.AuthErrorUnexpectedAlg, w.Code, got)
+	}
+}
+
 func TestAuthErrorHeader_InvalidDeviceTag(t *testing.T) {
 	const email = "tag@example.com"
 	const secret = "test-device-secret"
