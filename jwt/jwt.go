@@ -15,7 +15,7 @@ import (
 
 var (
 	ErrInvalidToken            = errors.New("invalid or expired token")
-	ErrUnexpectedSigningMethod = errors.New("unexpected token signing method")
+	ErrUnexpectedSigningMethod = fmt.Errorf("%w: unexpected token signing method", ErrInvalidToken)
 	ErrTypeAssertionFailed     = errors.New("failed to assert token claims")
 	ErrTokenRevoked            = fmt.Errorf("%w: token generation has been revoked", ErrInvalidToken)
 	ErrDeviceNotFound          = fmt.Errorf("%w: device not found", ErrInvalidToken)
@@ -190,6 +190,9 @@ func verifyToken[T jwt.Claims](m *JWTManager, tokenStr string, claims T) (T, str
 	parser := jwt.NewParser()
 
 	unverifiedToken, _, err := parser.ParseUnverified(tokenStr, claims)
+	if errors.Is(err, jwt.ErrTokenUnverifiable) {
+		return claims, "", ErrUnexpectedSigningMethod
+	}
 	if err != nil {
 		return claims, "", ErrInvalidToken
 	}
@@ -213,6 +216,9 @@ func verifyToken[T jwt.Claims](m *JWTManager, tokenStr string, claims T) (T, str
 
 	if !hasTokenType(unverifiedToken, tokenType) {
 		return claims, "", ErrInvalidToken
+	}
+	if unverifiedToken.Method.Alg() != jwt.SigningMethodHS256.Alg() {
+		return claims, "", ErrUnexpectedSigningMethod
 	}
 	expiresAt, _ := claims.GetExpirationTime()
 	if isExpired(expiresAt) {

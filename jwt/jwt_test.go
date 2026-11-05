@@ -1,6 +1,7 @@
 package jwt
 
 import (
+	"encoding/base64"
 	"errors"
 	"testing"
 	"time"
@@ -316,6 +317,20 @@ func TestJWTManager_ExpiredTokenSkipsDeviceLookup(t *testing.T) {
 	}
 	if errors.Is(err, ErrDeviceNotFound) {
 		t.Fatal("expected expired token to be rejected before the device lookup")
+	}
+}
+
+func TestJWTManager_RejectsUnexpectedAlgorithmBeforeDeviceLookup(t *testing.T) {
+	manager := NewJWTManager(NewMockDatabase())
+	encode := func(s string) string { return base64.RawURLEncoding.EncodeToString([]byte(s)) }
+	payload := encode(`{"device_id":"` + testDeviceID + `"}`)
+
+	for _, alg := range []string{"none", "HS384", "XYZ", ""} {
+		token := encode(`{"alg":"`+alg+`","typ":"`+RefreshTokenType+`"}`) + "." + payload + "."
+		_, err := manager.VerifyRefresh(token)
+		if !errors.Is(err, ErrUnexpectedSigningMethod) || !errors.Is(err, ErrInvalidToken) {
+			t.Errorf("alg %q: expected ErrUnexpectedSigningMethod wrapping ErrInvalidToken, got %v", alg, err)
+		}
 	}
 }
 
