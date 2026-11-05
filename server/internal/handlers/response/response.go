@@ -44,6 +44,7 @@ const (
 	AuthErrorInvalidSignature = "invalid_signature"
 	AuthErrorInvalidDeviceTag = "invalid_device_tag"
 	AuthErrorUnexpectedAlg    = "unexpected_algorithm"
+	AuthErrorInvalidIssuer    = "invalid_issuer"
 )
 
 func SetAuthError(w http.ResponseWriter, err error) {

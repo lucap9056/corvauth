@@ -6,6 +6,8 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+
+	"github.com/lucap9056/corvauth/server/internal/handlers/response"
 )
 
 func assertNoStore(t *testing.T, w *httptest.ResponseRecorder) {
@@ -71,10 +73,11 @@ func TestCallback_AuthorizationResponseIssuer(t *testing.T) {
 		name       string
 		iss        func(stub *oauthStub) string
 		wantStatus int
+		wantError  string
 	}{
-		{"matching", func(stub *oauthStub) string { return stub.URL }, http.StatusOK},
-		{"missing", func(*oauthStub) string { return "" }, http.StatusBadRequest},
-		{"mismatched", func(*oauthStub) string { return "https://evil.example.com" }, http.StatusBadRequest},
+		{"matching", func(stub *oauthStub) string { return stub.URL }, http.StatusOK, ""},
+		{"missing", func(*oauthStub) string { return "" }, http.StatusBadRequest, response.AuthErrorInvalidIssuer},
+		{"mismatched", func(*oauthStub) string { return "https://evil.example.com" }, http.StatusBadRequest, response.AuthErrorInvalidIssuer},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -86,8 +89,12 @@ func TestCallback_AuthorizationResponseIssuer(t *testing.T) {
 			if iss := tt.iss(stub); iss != "" {
 				params.Set("iss", iss)
 			}
-			if w := callback(env, params); w.Code != tt.wantStatus {
+			w := callback(env, params)
+			if w.Code != tt.wantStatus {
 				t.Fatalf("want %d, got %d: %s", tt.wantStatus, w.Code, w.Body.String())
+			}
+			if got := w.Header().Get(response.AuthErrorHeader); got != tt.wantError {
+				t.Errorf("%s: want %q, got %q", response.AuthErrorHeader, tt.wantError, got)
 			}
 		})
 	}

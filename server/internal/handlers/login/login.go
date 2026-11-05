@@ -154,6 +154,7 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.oauth2Client.ValidateIssuer(r.FormValue("iss")); err != nil {
+		w.Header().Set(response.AuthErrorHeader, response.AuthErrorInvalidIssuer)
 		response.JSON(w, false, "Invalid issuer", http.StatusBadRequest, err)
 		return
 	}
