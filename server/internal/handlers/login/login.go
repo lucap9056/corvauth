@@ -191,8 +191,8 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 		refreshtoken.SetCookie(w, res.AuthToken.RefreshToken, !h.options.DevMode)
 
 		if h.options.PassOAuthToken && res.OAuth2Token != nil {
-			w.Header().Set("X-Forwarded-Refresh-Token", res.OAuth2Token.RefreshToken)
-			w.Header().Set("X-Forwarded-Access-Token", res.OAuth2Token.AccessToken)
+			w.Header().Set(h.options.ProviderTokenHeaders.RefreshToken, res.OAuth2Token.RefreshToken)
+			w.Header().Set(h.options.ProviderTokenHeaders.AccessToken, res.OAuth2Token.AccessToken)
 		}
 
 		response.NoStoreJSON(w, res.Success, res.AuthToken, res.State)
@@ -202,8 +202,8 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 	if res.OAuth2Token != nil {
 
 		if h.options.PassOAuthToken {
-			w.Header().Set("X-Forwarded-Refresh-Token", res.OAuth2Token.RefreshToken)
-			w.Header().Set("X-Forwarded-Access-Token", res.OAuth2Token.AccessToken)
+			w.Header().Set(h.options.ProviderTokenHeaders.RefreshToken, res.OAuth2Token.RefreshToken)
+			w.Header().Set(h.options.ProviderTokenHeaders.AccessToken, res.OAuth2Token.AccessToken)
 			response.NoStoreJSON(w, res.Success, "Logged in", res.State)
 			return
 		}

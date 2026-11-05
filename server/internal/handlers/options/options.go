@@ -21,19 +21,30 @@ type UsersDB interface {
 }
 
 type Options struct {
-	DevMode             bool
-	AllowRegistration   bool
-	PassOAuthToken      bool
-	ClientPKCE          bool
-	DefaultRedirectURL  string
-	AllowedRedirectURLs []string
-	IdentityHeaders     identity.Headers
+	DevMode              bool
+	AllowRegistration    bool
+	PassOAuthToken       bool
+	ClientPKCE           bool
+	DefaultRedirectURL   string
+	AllowedRedirectURLs  []string
+	IdentityHeaders      identity.Headers
+	ProviderTokenHeaders ProviderTokenHeaders
+}
+
+type ProviderTokenHeaders struct {
+	AccessToken  string
+	RefreshToken string
+}
+
+var DefaultProviderTokenHeaders = ProviderTokenHeaders{
+	AccessToken:  "X-Corvauth-Provider-Access-Token",
+	RefreshToken: "X-Corvauth-Provider-Refresh-Token",
 }
 
 type Option func(*Options)
 
 func New(opts ...Option) *Options {
-	o := &Options{IdentityHeaders: identity.DefaultHeaders}
+	o := &Options{IdentityHeaders: identity.DefaultHeaders, ProviderTokenHeaders: DefaultProviderTokenHeaders}
 	for _, opt := range opts {
 		opt(o)
 	}
@@ -64,6 +75,10 @@ func WithClientPKCE(enabled bool) Option {
 
 func WithIdentityHeaders(headers identity.Headers) Option {
 	return func(c *Options) { c.IdentityHeaders = headers }
+}
+
+func WithProviderTokenHeaders(headers ProviderTokenHeaders) Option {
+	return func(c *Options) { c.ProviderTokenHeaders = headers }
 }
 
 func WithRedirectURLs(defaultURL string, allowed []string) Option {

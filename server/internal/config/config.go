@@ -13,6 +13,7 @@ import (
 
 	"github.com/lucap9056/corvauth/database/schema"
 	"github.com/lucap9056/corvauth/oauth2/providers"
+	"github.com/lucap9056/corvauth/server/internal/handlers/options"
 	"github.com/lucap9056/corvauth/server/internal/identity"
 )
 
@@ -51,9 +52,11 @@ const (
 	EnvOAuth2ClientPKCE          = "OAUTH2_CLIENT_PKCE"
 	EnvOIDCIssuerURL             = "OIDC_ISSUER_URL"
 
-	EnvAllowRegistration    = "ALLOW_REGISTRATION"
-	EnvAllowUnverifiedEmail = "ALLOW_UNVERIFIED_EMAIL"
-	EnvPassOAuthToken       = "PASS_OAUTH_TOKEN"
+	EnvAllowRegistration          = "ALLOW_REGISTRATION"
+	EnvAllowUnverifiedEmail       = "ALLOW_UNVERIFIED_EMAIL"
+	EnvPassOAuthToken             = "PASS_OAUTH_TOKEN"
+	EnvProviderAccessTokenHeader  = "PROVIDER_ACCESS_TOKEN_HEADER"
+	EnvProviderRefreshTokenHeader = "PROVIDER_REFRESH_TOKEN_HEADER"
 
 	EnvIdentityHeader  = "IDENTITY_HEADER"
 	EnvUserEmailHeader = "USER_EMAIL_HEADER"
@@ -169,6 +172,7 @@ type Auth struct {
 	AllowRegistration    bool
 	PassOAuthToken       bool
 	AllowUnverifiedEmail bool
+	ProviderTokenHeaders options.ProviderTokenHeaders
 }
 
 func Load() (*Config, error) {
@@ -186,6 +190,7 @@ func Load() (*Config, error) {
 			AllowRegistration:    isTrue(EnvAllowRegistration),
 			PassOAuthToken:       isTrue(EnvPassOAuthToken),
 			AllowUnverifiedEmail: isTrue(EnvAllowUnverifiedEmail),
+			ProviderTokenHeaders: loadProviderTokenHeaders(env),
 		},
 		IdentityHeaders: loadIdentityHeaders(env),
 	}
@@ -270,6 +275,18 @@ func loadIdentityHeaders(env *envReader) identity.Headers {
 	env.headerNames(
 		[]string{EnvIdentityHeader, EnvUserEmailHeader, EnvDeviceIDHeader, EnvUsernameHeader},
 		headers.Names(),
+	)
+	return headers
+}
+
+func loadProviderTokenHeaders(env *envReader) options.ProviderTokenHeaders {
+	headers := options.ProviderTokenHeaders{
+		AccessToken:  stringOr(EnvProviderAccessTokenHeader, options.DefaultProviderTokenHeaders.AccessToken),
+		RefreshToken: stringOr(EnvProviderRefreshTokenHeader, options.DefaultProviderTokenHeaders.RefreshToken),
+	}
+	env.headerNames(
+		[]string{EnvProviderAccessTokenHeader, EnvProviderRefreshTokenHeader},
+		[]string{headers.AccessToken, headers.RefreshToken},
 	)
 	return headers
 }

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/lucap9056/corvauth/database/schema"
+	"github.com/lucap9056/corvauth/server/internal/handlers/options"
 	"github.com/lucap9056/corvauth/server/internal/identity"
 )
 
@@ -20,6 +21,7 @@ var allEnvKeys = []string{
 	EnvOAuth2Scopes, EnvOAuth2ClientPKCE, EnvOIDCIssuerURL,
 	EnvAllowRegistration, EnvPassOAuthToken, EnvAllowUnverifiedEmail,
 	EnvIdentityHeader, EnvUserEmailHeader, EnvDeviceIDHeader, EnvUsernameHeader,
+	EnvProviderAccessTokenHeader, EnvProviderRefreshTokenHeader,
 }
 
 func setEnv(t *testing.T, values map[string]string) {
@@ -58,8 +60,8 @@ func TestLoad_Defaults(t *testing.T) {
 	if cfg.OAuth2 != nil {
 		t.Errorf("OAuth2: got %+v, want nil", cfg.OAuth2)
 	}
-	if cfg.Auth == nil || *cfg.Auth != (Auth{}) {
-		t.Errorf("Auth: got %+v, want zero value", cfg.Auth)
+	if expected := (Auth{ProviderTokenHeaders: options.DefaultProviderTokenHeaders}); cfg.Auth == nil || *cfg.Auth != expected {
+		t.Errorf("Auth: got %+v, want %+v", cfg.Auth, expected)
 	}
 	if cfg.IdentityHeaders != identity.DefaultHeaders {
 		t.Errorf("IdentityHeaders: got %+v, want %+v", cfg.IdentityHeaders, identity.DefaultHeaders)
@@ -207,7 +209,7 @@ func TestLoad_NestedValues(t *testing.T) {
 	if !slices.Equal(cfg.OAuth2.Scopes, []string{"openid", "email"}) {
 		t.Errorf("Scopes: got %q, want [openid email]", cfg.OAuth2.Scopes)
 	}
-	expectedAuth := Auth{AllowRegistration: true, PassOAuthToken: false, AllowUnverifiedEmail: true}
+	expectedAuth := Auth{AllowRegistration: true, PassOAuthToken: false, AllowUnverifiedEmail: true, ProviderTokenHeaders: options.DefaultProviderTokenHeaders}
 	if *cfg.Auth != expectedAuth {
 		t.Errorf("Auth: got %+v, want %+v", cfg.Auth, expectedAuth)
 	}
@@ -372,6 +374,11 @@ func TestLoad_Validation(t *testing.T) {
 		{
 			name:        "duplicate header name",
 			env:         map[string]string{EnvUserEmailHeader: "x-user", EnvUsernameHeader: "X-User"},
+			expectedErr: ErrDuplicateHeaderName,
+		},
+		{
+			name:        "duplicate provider token header name",
+			env:         map[string]string{EnvProviderAccessTokenHeader: "x-token", EnvProviderRefreshTokenHeader: "X-Token"},
 			expectedErr: ErrDuplicateHeaderName,
 		},
 		{

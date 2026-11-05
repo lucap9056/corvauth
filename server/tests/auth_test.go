@@ -297,11 +297,12 @@ func TestCallback_NoDB_PassOAuthToken(t *testing.T) {
 		t.Fatalf("want 200, got %d: %s", w.Code, w.Body.String())
 	}
 	assertNoStore(t, w)
-	if got := w.Header().Get("X-Forwarded-Access-Token"); got != "stub-access-token" {
-		t.Errorf("X-Forwarded-Access-Token: want %q, got %q", "stub-access-token", got)
+	headers := options.DefaultProviderTokenHeaders
+	if got := w.Header().Get(headers.AccessToken); got != "stub-access-token" {
+		t.Errorf("%s: want %q, got %q", headers.AccessToken, "stub-access-token", got)
 	}
-	if got := w.Header().Get("X-Forwarded-Refresh-Token"); got != "stub-refresh-token" {
-		t.Errorf("X-Forwarded-Refresh-Token: want %q, got %q", "stub-refresh-token", got)
+	if got := w.Header().Get(headers.RefreshToken); got != "stub-refresh-token" {
+		t.Errorf("%s: want %q, got %q", headers.RefreshToken, "stub-refresh-token", got)
 	}
 }
 
