@@ -260,3 +260,4 @@ When a `401` is caused by the device session, `/sessions/current/tokens`, `/sess
 |---|---|
 | `device_not_found` | The device session no longer exists |
 | `invalid_signature` | The signature does not match the device secret |
+| `invalid_device_tag` | The token's `device_tag` does not match its `device_id` and `exp` (only when `JWT_DEVICE_TAG_SECRET` is set) |

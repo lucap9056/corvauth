@@ -260,3 +260,4 @@ Identity token 以 `HS256` 簽章，header `typ` 為 `identity+jwt`：
 |---|---|
 | `device_not_found` | Device session 已不存在 |
 | `invalid_signature` | Signature 與 device secret 不符 |
+| `invalid_device_tag` | Token 的 `device_tag` 與其 `device_id`、`exp` 不符（僅在設定 `JWT_DEVICE_TAG_SECRET` 時） |
