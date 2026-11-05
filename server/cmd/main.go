@@ -96,6 +96,7 @@ func run(life *lifecycle.Coordinator) error {
 		jwt.WithRefreshTokenDuration(cfg.JWT.RefreshTokenDuration),
 		jwt.WithIssuer(cfg.JWT.Issuer),
 		jwt.WithAudience(cfg.JWT.Audience),
+		jwt.WithDeviceTagSecret(cfg.JWT.DeviceTagSecret),
 	)
 
 	var identitySigner *identity.Signer

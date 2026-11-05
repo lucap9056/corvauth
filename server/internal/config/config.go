@@ -32,6 +32,7 @@ const (
 	EnvJWTIssuer                 = "JWT_ISSUER"
 	EnvJWTAudience               = "JWT_AUDIENCE"
 	EnvIdentityJWTSecret         = "IDENTITY_JWT_SECRET"
+	EnvJWTDeviceTagSecret        = "JWT_DEVICE_TAG_SECRET"
 	EnvRedisURL                  = "REDIS_URL"
 	EnvOAuth2Provider            = "OAUTH2_PROVIDER"
 	EnvOAuth2ClientID            = "OAUTH2_CLIENT_ID"
@@ -60,6 +61,8 @@ const (
 	DefaultDBCleanupInterval  = 24 * time.Hour
 	DefaultJWTAccessDuration  = 15 * time.Minute
 	DefaultJWTRefreshDuration = 7 * 24 * time.Hour
+
+	MinDeviceTagSecretLength = 32
 )
 
 var (
@@ -71,6 +74,7 @@ var (
 	ErrInvalidUsernameColumn      = errors.New("invalid username column")
 	ErrUsernameColumnWithoutRef   = errors.New("DB_USER_USERNAME_COLUMN requires DB_USER_EMAIL_REFERENCE")
 	ErrIdentitySecretTooShort     = fmt.Errorf("IDENTITY_JWT_SECRET must be at least %d bytes", identity.MinSecretLength)
+	ErrDeviceTagSecretTooShort    = fmt.Errorf("JWT_DEVICE_TAG_SECRET must be at least %d bytes", MinDeviceTagSecretLength)
 )
 
 var identifierPattern = regexp.MustCompile("^[a-z_][a-z0-9_]*$")
@@ -111,6 +115,7 @@ type JWT struct {
 	Issuer               string
 	Audience             string
 	IdentitySecret       string
+	DeviceTagSecret      string
 }
 
 type Redis struct {
@@ -221,6 +226,7 @@ func loadJWT(env *envReader) *JWT {
 		Issuer:               os.Getenv(EnvJWTIssuer),
 		Audience:             os.Getenv(EnvJWTAudience),
 		IdentitySecret:       os.Getenv(EnvIdentityJWTSecret),
+		DeviceTagSecret:      os.Getenv(EnvJWTDeviceTagSecret),
 	}
 	if jwt.AccessTokenDuration <= 0 {
 		env.fail(fmt.Errorf("%s: %w", EnvJWTAccessDuration, ErrNonPositiveDuration))
@@ -230,6 +236,9 @@ func loadJWT(env *envReader) *JWT {
 	}
 	if jwt.IdentitySecret != "" && len(jwt.IdentitySecret) < identity.MinSecretLength {
 		env.fail(ErrIdentitySecretTooShort)
+	}
+	if jwt.DeviceTagSecret != "" && len(jwt.DeviceTagSecret) < MinDeviceTagSecretLength {
+		env.fail(ErrDeviceTagSecretTooShort)
 	}
 	return jwt
 }

@@ -13,7 +13,7 @@ var allEnvKeys = []string{
 	EnvHTTPAddress, EnvHTTPMode, EnvDatabaseURL, EnvRedisURL,
 	EnvDBMaxOpenConns, EnvDBMaxIdleConns, EnvDBConnMaxLifetime, EnvDBConnMaxIdleTime, EnvDBCleanupInterval,
 	EnvDBAutoCreateSchema, EnvDBUserEmailReference, EnvDBUserUsernameColumn,
-	EnvJWTAccessDuration, EnvJWTRefreshDuration, EnvJWTIssuer, EnvJWTAudience, EnvIdentityJWTSecret,
+	EnvJWTAccessDuration, EnvJWTRefreshDuration, EnvJWTIssuer, EnvJWTAudience, EnvIdentityJWTSecret, EnvJWTDeviceTagSecret,
 	EnvOAuth2Provider, EnvOAuth2ClientID, EnvOAuth2ClientSecret, EnvOAuth2RedirectURL, EnvOAuth2AllowedRedirectURLs,
 	EnvOAuth2AuthURL, EnvOAuth2TokenURL, EnvOAuth2UserinfoURL, EnvOAuth2RevokeURL,
 	EnvOAuth2Scopes, EnvOAuth2ClientPKCE, EnvOIDCIssuerURL,
@@ -129,6 +129,7 @@ func TestLoad_DatabaseAndJWT(t *testing.T) {
 		EnvJWTIssuer:            "https://auth.example.com",
 		EnvJWTAudience:          "api",
 		EnvIdentityJWTSecret:    "0123456789abcdef0123456789abcdef",
+		EnvJWTDeviceTagSecret:   "fedcba9876543210fedcba9876543210",
 	})
 
 	cfg, err := Load()
@@ -155,6 +156,7 @@ func TestLoad_DatabaseAndJWT(t *testing.T) {
 		Issuer:               "https://auth.example.com",
 		Audience:             "api",
 		IdentitySecret:       "0123456789abcdef0123456789abcdef",
+		DeviceTagSecret:      "fedcba9876543210fedcba9876543210",
 	}
 	if *cfg.JWT != expectedJWT {
 		t.Errorf("JWT: got %+v, want %+v", cfg.JWT, expectedJWT)
@@ -351,6 +353,11 @@ func TestLoad_Validation(t *testing.T) {
 			name:        "short identity secret",
 			env:         map[string]string{EnvIdentityJWTSecret: "too-short"},
 			expectedErr: ErrIdentitySecretTooShort,
+		},
+		{
+			name:        "short device tag secret",
+			env:         map[string]string{EnvJWTDeviceTagSecret: "too-short"},
+			expectedErr: ErrDeviceTagSecretTooShort,
 		},
 		{
 			name:        "builtin without urls",
