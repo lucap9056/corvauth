@@ -52,6 +52,7 @@ Invalid values stop the server on startup
 | `JWT_ISSUER` | — | `iss` claim, set and verified |
 | `JWT_AUDIENCE` | — | `aud` claim, set and verified |
 | `IDENTITY_JWT_SECRET` | — | At least 32 bytes, `/verify` returns a signed identity token instead (see [Identity Token](api.md#identity-token)) |
+| `JWT_DEVICE_TAG_SECRET` | — | At least 32 bytes, secret for generating the token's `device_tag` |
 
 ## Sign-in Policy
 

@@ -52,6 +52,7 @@
 | `JWT_ISSUER` | — | 寫入並驗證 `iss` claim |
 | `JWT_AUDIENCE` | — | 寫入並驗證 `aud` claim |
 | `IDENTITY_JWT_SECRET` | — | 至少 32 bytes，`/verify` 改回傳簽章過的 identity token（見 [Identity Token](api.zh-TW.md#identity-token)） |
+| `JWT_DEVICE_TAG_SECRET` | — | 至少 32 bytes，用於生成 token 的 `device_tag` |
 
 ## 登入政策
 

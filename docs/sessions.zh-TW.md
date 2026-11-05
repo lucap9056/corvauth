@@ -21,7 +21,7 @@
 ## Token
 
 - **Access token**：短效（`JWT_ACCESS_TOKEN_DURATION`），以 `Authorization: Bearer <token>` 傳送
-  - Claim 含 `user_email`、`device_id`、`username`
+  - Claim 含 `user_email`、`device_id`、`username`、`device_tag`（需設 `JWT_DEVICE_TAG_SECRET`）
 - **Refresh token**：讀自 `refresh_token` cookie 或 JSON body `{ "refresh_token": "..." }`
   - Cookie 為 `HttpOnly`、`SameSite=Lax`，與 token 同時到期
   - 讀不到 cookie 的頁面可由 `GET /sessions/current` 取得到期時間

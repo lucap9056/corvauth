@@ -21,7 +21,7 @@ Optional `/callback` request headers:
 ## Tokens
 
 - **Access token**: short-lived (`JWT_ACCESS_TOKEN_DURATION`), sent as `Authorization: Bearer <token>`
-  - Claims include `user_email`, `device_id`, `username`
+  - Claims include `user_email`, `device_id`, `username`, `device_tag` (with `JWT_DEVICE_TAG_SECRET`)
 - **Refresh token**: read from the `refresh_token` cookie or JSON body `{ "refresh_token": "..." }`
   - Cookie is `HttpOnly`, `SameSite=Lax`, and expires with the token
   - Pages that cannot read the cookie get its expiry from `GET /sessions/current`
