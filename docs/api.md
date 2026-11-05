@@ -149,6 +149,8 @@ No body; returns user headers (see [Identity Token](#identity-token))
 
 For a reverse proxy's auth request (e.g. nginx `auth_request`, Traefik `forwardAuth`); forward the returned headers upstream
 
+User headers in the request are accepted only when they match the access token, e.g. forwarded by an outer layer that already called `/verify` with the same token; otherwise `403`. Without `Authorization: Bearer`, any user header, even an empty one, is rejected with `403` before anything else; `/verify-optional` does the same
+
 ## `GET /verify-optional`
 
 For routes that also allow anonymous access; only requests with an `Authorization: Bearer` header are checked for validity
@@ -270,3 +272,9 @@ When a `401` is caused by the device session, `/sessions/current/tokens`, `/sess
 | Value | Cause |
 |---|---|
 | `invalid_issuer` | `iss` does not match the provider, or is missing when the provider declares it |
+
+`/verify` and `/verify-optional` add `X-Auth-Error` to the `403` caused by user headers in the request:
+
+| Value | Cause |
+|---|---|
+| `spoofed_identity_header` | User headers are sent without an access token, or do not match it |

@@ -149,6 +149,8 @@ Response：
 
 供 reverse proxy 的 auth request 使用（如 nginx `auth_request`、Traefik `forwardAuth`），把回傳的 header 轉發給 upstream
 
+請求帶有的使用者 header 須與 access token 一致才會接受，例如外層已用同一個 token 呼叫過 `/verify` 並轉發其 header；否則回 `403`。沒有 `Authorization: Bearer` 時，帶有任一使用者 header（即使值為空）都會最先回 `403`；`/verify-optional` 相同
+
 ## `GET /verify-optional`
 
 供同時允許匿名存取的路由使用，只對帶有 `Authorization: Bearer` header 的請求檢查有效性
@@ -270,3 +272,9 @@ Identity token 以 `HS256` 簽章，header `typ` 為 `identity+jwt`：
 | 值 | 原因 |
 |---|---|
 | `invalid_issuer` | `iss` 與 provider 不符，或 provider 宣告支援卻缺少 `iss` |
+
+`/verify`、`/verify-optional` 因請求帶有使用者 header 回 `403` 時會帶 `X-Auth-Error`：
+
+| 值 | 原因 |
+|---|---|
+| `spoofed_identity_header` | 沒有 access token 卻帶有使用者 header，或與 access token 不一致 |
