@@ -304,3 +304,17 @@ func TestJWTManager_VerifyRefresh_TokenTypeVariants(t *testing.T) {
 		})
 	}
 }
+
+func TestJWTManager_ExpiredTokenSkipsDeviceLookup(t *testing.T) {
+	manager, db := newTestManager(t, WithRefreshTokenDuration(-time.Second))
+	refreshToken := mustGenerateRefresh(t, manager)
+	delete(db.devices, testDeviceID)
+
+	_, err := manager.VerifyRefresh(refreshToken)
+	if !errors.Is(err, ErrInvalidToken) {
+		t.Fatalf("expected ErrInvalidToken, got %v", err)
+	}
+	if errors.Is(err, ErrDeviceNotFound) {
+		t.Fatal("expected expired token to be rejected before the device lookup")
+	}
+}

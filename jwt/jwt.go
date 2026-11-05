@@ -101,6 +101,10 @@ func (m *JWTManager) GenerateAccess(refreshToken, username string) (string, erro
 	return signToken(AccessTokenType, accessClaims, secret)
 }
 
+func isExpired(expiresAt *jwt.NumericDate) bool {
+	return expiresAt != nil && !time.Now().Before(expiresAt.Time)
+}
+
 func signToken(tokenType string, claims jwt.Claims, secret string) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	token.Header["typ"] = tokenType
@@ -173,6 +177,10 @@ func verifyToken[T jwt.Claims](m *JWTManager, tokenStr string, claims T) (T, str
 	}
 
 	if !hasTokenType(unverifiedToken, tokenType) {
+		return claims, "", ErrInvalidToken
+	}
+	expiresAt, _ := claims.GetExpirationTime()
+	if isExpired(expiresAt) {
 		return claims, "", ErrInvalidToken
 	}
 
