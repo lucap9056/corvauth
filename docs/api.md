@@ -16,6 +16,8 @@
 | [`GET /verify`](#get-verify) | session modes | `Authorization: Bearer` access token | `204` + user headers |
 | [`GET /verify-optional`](#get-verify-optional) | session modes | `Authorization: Bearer` access token, checked only when present | `204`, user headers only when signed in |
 | [`DELETE /sessions/current`](#delete-sessionscurrent) | session modes | `refresh_token` cookie or body (optional) | `200`, deletes the device session, clears the cookie |
+| [`GET /sessions`](#get-sessions) | session modes | `Authorization: Bearer` access token | `200`, lists the user's device sessions |
+| [`DELETE /sessions`](#delete-sessions) | session modes | `Authorization: Bearer` access token | `200`, deletes all of the user's device sessions, clears the cookie |
 | [`DELETE /users/me`](#delete-usersme) | managed users | `Authorization: Bearer` access token | `200`, deletes all sessions and the user, clears the cookie |
 
 ## `GET /health`
@@ -174,6 +176,39 @@ Response:
 }
 ```
 
+## `GET /sessions`
+
+Lists every device session of the user, most recently refreshed first
+
+```json
+{
+  "success": true,
+  "message": [
+    {
+      "device_id": "3f1c2a9e-...",
+      "device_name": "Unknown Device",
+      "updated_at": 1767225600,
+      "current": true
+    }
+  ]
+}
+```
+
+- `device_name`: the `X-Device-Name` sent to `/callback`
+- `updated_at`: Unix seconds of the last login or refresh
+- `current`: the session the access token belongs to
+
+## `DELETE /sessions`
+
+Revokes every device session of the user, including the current one; their access tokens fail `/verify` immediately
+
+```json
+{
+  "success": true,
+  "message": "Logged out from all sessions"
+}
+```
+
 ## `DELETE /users/me`
 
 ```json
@@ -219,7 +254,7 @@ The identity token is signed with `HS256`, header `typ`: `identity+jwt`:
 
 ## Error Headers
 
-When a `401` is caused by the device session, `/sessions/current/tokens`, `/sessions/current/access-token`, `GET /sessions/current`, `/verify`, `/verify-optional`, and `DELETE /users/me` add `X-Auth-Error`, so a gateway can tell it apart from expired or malformed tokens:
+When a `401` is caused by the device session, `/sessions/current/tokens`, `/sessions/current/access-token`, `GET /sessions/current`, `GET /sessions`, `DELETE /sessions`, `/verify`, `/verify-optional`, and `DELETE /users/me` add `X-Auth-Error`, so a gateway can tell it apart from expired or malformed tokens:
 
 | Value | Cause |
 |---|---|

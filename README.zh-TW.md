@@ -53,9 +53,9 @@ docker compose -f docker-dev/docker-compose.yml up --build -d
 | **條件** | 未設 `DATABASE_URL` | 只設 `DATABASE_URL` | 兩者都設 |
 | **Users table** | 無 | `users`，由本 server 管理 | 你的 table，以 email 參照 |
 | **Session token** | 無，直接回傳 provider token | 有 | 有 |
-| **`/sessions/current`、`/verify`** | ✗ | ✓ | ✓ |
+| **`GET`/`DELETE /sessions`、`/sessions/current`、`/verify`** | X | O | O |
 | **`ALLOW_REGISTRATION`** | 無效 | 新使用者 insert 到 `users` | 無效（啟動時警告） |
-| **`DELETE /users/me`** | ✗ | 刪除使用者與所有 session | ✗ |
+| **`DELETE /users/me`** | X | 刪除使用者與所有 session | X |
 | **`username` claim** | — | `users.username` | `DB_USER_USERNAME_COLUMN`，未設則為空 |
 | **`DB_AUTO_CREATE_SCHEMA=true` 建立** | — | `users`、`auth_user_devices` | `auth_user_devices` |
 

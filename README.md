@@ -53,9 +53,9 @@ Selected by `DATABASE_URL` and `DB_USER_EMAIL_REFERENCE`:
 | **Set when** | `DATABASE_URL` unset | only `DATABASE_URL` set | both set |
 | **Users table** | none | `users`, owned by this server | yours, referenced by email |
 | **Session tokens** | no, provider tokens returned as-is | yes | yes |
-| **`/sessions/current`, `/verify`** | ✗ | ✓ | ✓ |
+| **`GET`/`DELETE /sessions`, `/sessions/current`, `/verify`** | X | O | O |
 | **`ALLOW_REGISTRATION`** | ignored | inserts new users into `users` | ignored (warns on startup) |
-| **`DELETE /users/me`** | ✗ | deletes the user and all sessions | ✗ |
+| **`DELETE /users/me`** | X | deletes the user and all sessions | X |
 | **`username` claim** | — | `users.username` | `DB_USER_USERNAME_COLUMN`, or empty |
 | **`DB_AUTO_CREATE_SCHEMA=true` creates** | — | `users`, `auth_user_devices` | `auth_user_devices` |
 

@@ -16,6 +16,8 @@
 | [`GET /verify`](#get-verify) | session 模式 | `Authorization: Bearer` access token | `204` + 使用者 header |
 | [`GET /verify-optional`](#get-verify-optional) | session 模式 | `Authorization: Bearer` access token，有帶才檢查 | `204`，登入時才帶使用者 header |
 | [`DELETE /sessions/current`](#delete-sessionscurrent) | session 模式 | `refresh_token` cookie 或 body（選填） | `200`，刪除 device session 並清除 cookie |
+| [`GET /sessions`](#get-sessions) | session 模式 | `Authorization: Bearer` access token | `200`，列出該使用者的 device session |
+| [`DELETE /sessions`](#delete-sessions) | session 模式 | `Authorization: Bearer` access token | `200`，刪除該使用者所有 device session 並清除 cookie |
 | [`DELETE /users/me`](#delete-usersme) | managed users | `Authorization: Bearer` access token | `200`，刪除所有 session 與該使用者，並清除 cookie |
 
 ## `GET /health`
@@ -174,6 +176,39 @@ Response：
 }
 ```
 
+## `GET /sessions`
+
+列出該使用者所有 device session，最近 refresh 的在前
+
+```json
+{
+  "success": true,
+  "message": [
+    {
+      "device_id": "3f1c2a9e-...",
+      "device_name": "Unknown Device",
+      "updated_at": 1767225600,
+      "current": true
+    }
+  ]
+}
+```
+
+- `device_name`：送到 `/callback` 的 `X-Device-Name`
+- `updated_at`：最後一次登入或 refresh 的 Unix 秒數
+- `current`：此 access token 所屬的 session
+
+## `DELETE /sessions`
+
+撤銷該使用者所有 device session（包括目前這個），其 access token 立即無法通過 `/verify`
+
+```json
+{
+  "success": true,
+  "message": "Logged out from all sessions"
+}
+```
+
 ## `DELETE /users/me`
 
 ```json
@@ -219,7 +254,7 @@ Identity token 以 `HS256` 簽章，header `typ` 為 `identity+jwt`：
 
 ## Error Header
 
-`401` 由 device session 造成時，`/sessions/current/tokens`、`/sessions/current/access-token`、`GET /sessions/current`、`/verify`、`/verify-optional`、`DELETE /users/me` 會帶 `X-Auth-Error`，讓 gateway 與過期或格式錯誤的 token 區分：
+`401` 由 device session 造成時，`/sessions/current/tokens`、`/sessions/current/access-token`、`GET /sessions/current`、`GET /sessions`、`DELETE /sessions`、`/verify`、`/verify-optional`、`DELETE /users/me` 會帶 `X-Auth-Error`，讓 gateway 與過期或格式錯誤的 token 區分：
 
 | 值 | 原因 |
 |---|---|
