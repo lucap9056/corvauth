@@ -111,12 +111,13 @@ func TestUnauthorized_WWWAuthenticate(t *testing.T) {
 		{"verify invalid token", http.MethodGet, "/verify", "Bearer invalid.token.value", "", invalidChallenge},
 		{"delete me missing token", http.MethodDelete, "/users/me", "", "", missingChallenge},
 		{"delete me invalid token", http.MethodDelete, "/users/me", "Bearer invalid.token.value", "", invalidChallenge},
-		{"refresh missing token", http.MethodPost, "/refresh", "", "", missingChallenge},
-		{"refresh invalid token", http.MethodPost, "/refresh", "", invalidRefresh, invalidChallenge},
-		{"refresh access missing token", http.MethodPost, "/refresh-access", "", "", missingChallenge},
-		{"refresh access invalid token", http.MethodPost, "/refresh-access", "", invalidRefresh, invalidChallenge},
-		{"refresh status missing token", http.MethodPost, "/refresh-status", "", "", missingChallenge},
-		{"refresh status invalid token", http.MethodPost, "/refresh-status", "", invalidRefresh, invalidChallenge},
+		{"refresh missing token", http.MethodPost, "/sessions/current/tokens", "", "", missingChallenge},
+		{"refresh invalid token", http.MethodPost, "/sessions/current/tokens", "", invalidRefresh, invalidChallenge},
+		{"refresh access missing token", http.MethodPost, "/sessions/current/access-token", "", "", missingChallenge},
+		{"refresh access invalid token", http.MethodPost, "/sessions/current/access-token", "", invalidRefresh, invalidChallenge},
+		{"refresh status missing token", http.MethodGet, "/sessions/current", "", "", missingChallenge},
+		{"refresh status invalid token", http.MethodGet, "/sessions/current", "Bearer not.a.valid.jwt", "", invalidChallenge},
+		{"refresh status ignores body", http.MethodGet, "/sessions/current", "", invalidRefresh, missingChallenge},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

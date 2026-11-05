@@ -2,9 +2,11 @@ package integration
 
 import (
 	"encoding/json/v2"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/lucap9056/corvauth/server/internal/handlers/options"
@@ -12,9 +14,17 @@ import (
 
 const otherRedirectURL = "https://app.example/callback"
 
-func loginQuery(t *testing.T, env *testEnv, path string) url.Values {
+func loginBody(redirectURI string) io.Reader {
+	if redirectURI == "" {
+		return nil
+	}
+	body, _ := json.Marshal(map[string]string{"redirect_uri": redirectURI})
+	return strings.NewReader(string(body))
+}
+
+func loginQuery(t *testing.T, env *testEnv, body io.Reader) url.Values {
 	t.Helper()
-	w := env.do(httptest.NewRequest(http.MethodGet, path, nil))
+	w := env.do(httptest.NewRequest(http.MethodPost, "/sessions", body))
 	if w.Code != http.StatusOK {
 		t.Fatalf("login failed: %d %s", w.Code, w.Body.String())
 	}
@@ -35,13 +45,13 @@ func loginQuery(t *testing.T, env *testEnv, path string) url.Values {
 
 func TestLogin_RedirectURL(t *testing.T) {
 	cases := []struct {
-		name string
-		path string
-		want string
+		name        string
+		redirectURI string
+		want        string
 	}{
-		{"default when omitted", "/login", testRedirectURL},
-		{"default when requested explicitly", "/login?redirect_uri=" + url.QueryEscape(testRedirectURL), testRedirectURL},
-		{"allowed", "/login?redirect_uri=" + url.QueryEscape(otherRedirectURL), otherRedirectURL},
+		{"default when omitted", "", testRedirectURL},
+		{"default when requested explicitly", testRedirectURL, testRedirectURL},
+		{"allowed", otherRedirectURL, otherRedirectURL},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -49,7 +59,7 @@ func TestLogin_RedirectURL(t *testing.T) {
 			defer stub.Close()
 			env := newTestEnv(stub, nil, options.WithRedirectURLs(testRedirectURL, []string{otherRedirectURL}))
 
-			query := loginQuery(t, env, tc.path)
+			query := loginQuery(t, env, loginBody(tc.redirectURI))
 			if got := query.Get("redirect_uri"); got != tc.want {
 				t.Fatalf("auth URL redirect_uri = %q; want %q", got, tc.want)
 			}
@@ -69,11 +79,12 @@ func TestLogin_RedirectURLRejected(t *testing.T) {
 	cases := []struct {
 		name string
 		opt  options.Option
-		path string
+		body io.Reader
 	}{
-		{"not allowed", options.WithRedirectURLs(testRedirectURL, []string{otherRedirectURL}), "/login?redirect_uri=" + url.QueryEscape("https://evil.example/callback")},
-		{"prefix of allowed", options.WithRedirectURLs(testRedirectURL, []string{otherRedirectURL}), "/login?redirect_uri=" + url.QueryEscape(otherRedirectURL+"/extra")},
-		{"omitted without default", options.WithRedirectURLs("", []string{otherRedirectURL}), "/login"},
+		{"not allowed", options.WithRedirectURLs(testRedirectURL, []string{otherRedirectURL}), loginBody("https://evil.example/callback")},
+		{"prefix of allowed", options.WithRedirectURLs(testRedirectURL, []string{otherRedirectURL}), loginBody(otherRedirectURL + "/extra")},
+		{"omitted without default", options.WithRedirectURLs("", []string{otherRedirectURL}), nil},
+		{"malformed body", options.WithRedirectURLs(testRedirectURL, nil), strings.NewReader("{")},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -81,7 +92,7 @@ func TestLogin_RedirectURLRejected(t *testing.T) {
 			defer stub.Close()
 			env := newTestEnv(stub, nil, tc.opt)
 
-			w := env.do(httptest.NewRequest(http.MethodGet, tc.path, nil))
+			w := env.do(httptest.NewRequest(http.MethodPost, "/sessions", tc.body))
 			if w.Code != http.StatusBadRequest {
 				t.Fatalf("want 400, got %d: %s", w.Code, w.Body.String())
 			}

@@ -77,7 +77,7 @@ func (h *Handler) VerifyOptional(w http.ResponseWriter, r *http.Request) {
 	h.Verify(w, r)
 }
 
-func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) DeleteCurrent(w http.ResponseWriter, r *http.Request) {
 	refreshToken, err := refreshtoken.FromRequest(r)
 	if err == nil {
 		claims, pErr := h.jwtManager.VerifyRefresh(refreshToken)

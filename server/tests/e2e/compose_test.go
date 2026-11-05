@@ -68,14 +68,14 @@ func TestFlow(t *testing.T) {
 	// 3. Login
 	t.Log("[3/4] login")
 	func() {
-		t.Log("  GET /login")
-		resp, err := client.Get(middlewareBase + "/login")
+		t.Log("  POST /sessions")
+		resp, err := client.Post(middlewareBase+"/sessions", "application/json", nil)
 		if err != nil {
-			t.Fatalf("GET /login: %v", err)
+			t.Fatalf("POST /sessions: %v", err)
 		}
 		defer resp.Body.Close()
 		if resp.StatusCode != http.StatusOK {
-			t.Fatalf("GET /login: expected 200, got %d", resp.StatusCode)
+			t.Fatalf("POST /sessions: expected 200, got %d", resp.StatusCode)
 		}
 
 		var loginBody struct {
@@ -85,10 +85,10 @@ func TestFlow(t *testing.T) {
 			} `json:"message"`
 		}
 		if err := json.UnmarshalRead(resp.Body, &loginBody); err != nil {
-			t.Fatalf("GET /login: decode: %v", err)
+			t.Fatalf("POST /sessions: decode: %v", err)
 		}
 		if !loginBody.Success || loginBody.Message.URL == "" {
-			t.Fatalf("GET /login: missing url in response")
+			t.Fatalf("POST /sessions: missing url in response")
 		}
 		t.Logf("  auth URL: %s", loginBody.Message.URL)
 

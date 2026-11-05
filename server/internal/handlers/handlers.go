@@ -33,14 +33,14 @@ func RegisterRoutes(mux *http.ServeMux, deps Dependencies) {
 
 	if deps.DB != nil {
 		refreshHandler := refresh.New(deps.DB, deps.UsersDB, deps.JWTManager, deps.Flight, !opts.DevMode)
-		mux.HandleFunc("POST /refresh", refreshHandler.Refresh)
-		mux.HandleFunc("POST /refresh-access", refreshHandler.RefreshAccess)
-		mux.HandleFunc("POST /refresh-status", refreshHandler.RefreshStatus)
+		mux.HandleFunc("POST /sessions/current/tokens", refreshHandler.Refresh)
+		mux.HandleFunc("POST /sessions/current/access-token", refreshHandler.RefreshAccess)
+		mux.HandleFunc("GET /sessions/current", refreshHandler.RefreshStatus)
 
 		sessionHandler := session.New(deps.DB, deps.UsersDB, deps.JWTManager, deps.IdentitySigner)
 		mux.HandleFunc("GET /verify", sessionHandler.Verify)
 		mux.HandleFunc("GET /verify-optional", sessionHandler.VerifyOptional)
-		mux.HandleFunc("POST /logout", sessionHandler.Logout)
+		mux.HandleFunc("DELETE /sessions/current", sessionHandler.DeleteCurrent)
 		if !deps.UsersDB.External() {
 			mux.HandleFunc("DELETE /users/me", sessionHandler.DeleteMe)
 		}
@@ -48,7 +48,7 @@ func RegisterRoutes(mux *http.ServeMux, deps Dependencies) {
 
 	if deps.OAuth2Client != nil {
 		loginHandler := login.New(deps.DB, deps.UsersDB, deps.JWTManager, deps.StateCache, deps.OAuth2Client, deps.Flight, opts)
-		mux.HandleFunc("GET /login", loginHandler.Login)
+		mux.HandleFunc("POST /sessions", loginHandler.Login)
 		mux.HandleFunc("GET /callback", loginHandler.Callback)
 		log.Println("OAuth2 is enabled")
 	}

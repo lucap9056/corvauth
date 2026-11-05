@@ -5,8 +5,10 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"slices"
 	"time"
@@ -26,6 +28,7 @@ const (
 	flightKeyPrefix         = "exchange:"
 	exchangeTimeout         = 30 * time.Second
 	initialDeviceGeneration = 1
+	maxLoginRequestSize     = 8 << 10
 )
 
 type OAuth2Client interface {
@@ -60,6 +63,10 @@ func New(db options.DB, users options.UsersDB, jwtManager *jwt.JWTManager, state
 
 const DefaultDeviceName = "Unknown Device"
 
+type LoginRequest struct {
+	RedirectURI string `json:"redirect_uri"`
+}
+
 type LoginResponse struct {
 	Verifier string `json:"verifier,omitempty"`
 	URL      string `json:"url"`
@@ -87,7 +94,12 @@ func generateDeviceSecret() string {
 
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 
-	requestedRedirectURL := r.URL.Query().Get("redirect_uri")
+	req, err := readLoginRequest(r)
+	if err != nil {
+		response.JSON(w, false, "Invalid request body", http.StatusBadRequest, nil)
+		return
+	}
+	requestedRedirectURL := req.RedirectURI
 	if requestedRedirectURL == "" && h.options.DefaultRedirectURL == "" {
 		response.JSON(w, false, "Missing redirect_uri parameter", http.StatusBadRequest, nil)
 		return
@@ -113,6 +125,16 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		resp.Verifier = verifier
 	}
 	response.NoStoreJSON(w, true, resp, http.StatusOK)
+}
+
+func readLoginRequest(r *http.Request) (LoginRequest, error) {
+	var req LoginRequest
+	body, err := io.ReadAll(io.LimitReader(r.Body, maxLoginRequestSize))
+	if err != nil || len(body) == 0 {
+		return req, err
+	}
+	err = json.Unmarshal(body, &req)
+	return req, err
 }
 
 func (h *Handler) resolveRedirectURL(requested string) (string, bool) {

@@ -175,7 +175,7 @@ type Status struct {
 }
 
 func (h *Handler) RefreshStatus(w http.ResponseWriter, r *http.Request) {
-	refreshToken, err := refreshtoken.FromRequest(r)
+	refreshToken, err := refreshtoken.FromCookieOrHeader(r)
 	if err != nil {
 		response.Unauthorized(w, response.BearerChallenge, "Invalid refresh token", err)
 		return

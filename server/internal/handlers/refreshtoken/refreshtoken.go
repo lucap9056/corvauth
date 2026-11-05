@@ -2,13 +2,17 @@ package refreshtoken
 
 import (
 	"encoding/json/v2"
+	"errors"
 	"net/http"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/lucap9056/corvauth/server/internal/handlers/bearer"
 )
 
 const CookieName = "refresh_token"
+
+var ErrMissing = errors.New("missing refresh token")
 
 type Request struct {
 	RefreshToken string `json:"refresh_token"`
@@ -25,6 +29,18 @@ func FromRequest(r *http.Request) (string, error) {
 		return "", err
 	}
 	return req.RefreshToken, nil
+}
+
+func FromCookieOrHeader(r *http.Request) (string, error) {
+	cookie, err := r.Cookie(CookieName)
+	if err == nil {
+		return cookie.Value, nil
+	}
+
+	if token, ok := bearer.Token(r); ok {
+		return token, nil
+	}
+	return "", ErrMissing
 }
 
 func SetCookie(w http.ResponseWriter, token string, secure bool) {

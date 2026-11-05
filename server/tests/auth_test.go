@@ -35,7 +35,7 @@ func TestLogin(t *testing.T) {
 	defer stub.Close()
 
 	env := newTestEnv(stub, newMockDB())
-	w := env.do(httptest.NewRequest(http.MethodGet, "/login", nil))
+	w := env.do(httptest.NewRequest(http.MethodPost, "/sessions", nil))
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("want 200, got %d", w.Code)
@@ -69,10 +69,10 @@ func TestLogin(t *testing.T) {
 	}
 }
 
-// loginState calls /login and extracts the state parameter from the returned URL.
+// loginState calls POST /sessions and extracts the state parameter from the returned URL.
 func loginState(t *testing.T, env *testEnv) string {
 	t.Helper()
-	w := env.do(httptest.NewRequest(http.MethodGet, "/login", nil))
+	w := env.do(httptest.NewRequest(http.MethodPost, "/sessions", nil))
 	if w.Code != http.StatusOK {
 		t.Fatalf("login failed: %d %s", w.Code, w.Body.String())
 	}
@@ -318,7 +318,7 @@ func TestRefresh_WithBody(t *testing.T) {
 	refresh, _ := env.issueTokens(email, "device")
 
 	body, _ := json.Marshal(map[string]string{"refresh_token": refresh})
-	req := httptest.NewRequest(http.MethodPost, "/refresh", bytes.NewReader(body))
+	req := httptest.NewRequest(http.MethodPost, "/sessions/current/tokens", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := env.do(req)
 
@@ -360,7 +360,7 @@ func TestRefresh_WithCookie(t *testing.T) {
 
 	refresh, _ := env.issueTokens(email, "device")
 
-	req := httptest.NewRequest(http.MethodPost, "/refresh", nil)
+	req := httptest.NewRequest(http.MethodPost, "/sessions/current/tokens", nil)
 	req.AddCookie(&http.Cookie{Name: "refresh_token", Value: refresh})
 	w := env.do(req)
 
@@ -379,7 +379,7 @@ func TestRefresh_WithCookie(t *testing.T) {
 }
 
 func refreshWithCookie(env *testEnv, refreshToken string) (int, string) {
-	req := httptest.NewRequest(http.MethodPost, "/refresh", nil)
+	req := httptest.NewRequest(http.MethodPost, "/sessions/current/tokens", nil)
 	req.AddCookie(&http.Cookie{Name: "refresh_token", Value: refreshToken})
 	w := env.do(req)
 
@@ -440,7 +440,7 @@ func TestRefresh_InvalidToken(t *testing.T) {
 	env := newTestEnv(stub, newMockDB())
 
 	body, _ := json.Marshal(map[string]string{"refresh_token": "not.a.valid.jwt"})
-	req := httptest.NewRequest(http.MethodPost, "/refresh", bytes.NewReader(body))
+	req := httptest.NewRequest(http.MethodPost, "/sessions/current/tokens", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := env.do(req)
 
@@ -462,7 +462,7 @@ func TestRefreshAccess(t *testing.T) {
 	refresh, _ := env.issueTokens(email, "device")
 
 	body, _ := json.Marshal(map[string]string{"refresh_token": refresh})
-	req := httptest.NewRequest(http.MethodPost, "/refresh-access", bytes.NewReader(body))
+	req := httptest.NewRequest(http.MethodPost, "/sessions/current/access-token", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := env.do(req)
 
@@ -498,7 +498,7 @@ func TestRefreshStatus(t *testing.T) {
 		t.Fatalf("VerifyRefresh: %v", err)
 	}
 
-	w := refreshAt(env, "/refresh-status", refresh)
+	w := refreshAt(env, routeCurrentSession, refresh)
 	if w.Code != http.StatusOK {
 		t.Fatalf("want 200, got %d: %s", w.Code, w.Body.String())
 	}
@@ -532,7 +532,7 @@ func TestRefreshStatus(t *testing.T) {
 	}
 
 	if _, err := env.jwtManager.VerifyRefresh(refresh); err != nil {
-		t.Errorf("refresh token must not be rotated by /refresh-status: %v", err)
+		t.Errorf("refresh token must not be rotated by GET /sessions/current: %v", err)
 	}
 }
 
@@ -600,7 +600,7 @@ func TestLogout(t *testing.T) {
 
 	refresh, _ := env.issueTokens(email, "device")
 
-	req := httptest.NewRequest(http.MethodPost, "/logout", nil)
+	req := httptest.NewRequest(http.MethodDelete, "/sessions/current", nil)
 	req.AddCookie(&http.Cookie{Name: "refresh_token", Value: refresh})
 	w := env.do(req)
 
@@ -608,15 +608,7 @@ func TestLogout(t *testing.T) {
 		t.Fatalf("want 200, got %d: %s", w.Code, w.Body.String())
 	}
 
-	var cleared bool
-	for _, c := range w.Result().Cookies() {
-		if c.Name == "refresh_token" && c.Value == "" {
-			cleared = true
-		}
-	}
-	if !cleared {
-		t.Error("refresh_token cookie should be cleared after logout")
-	}
+	assertCookieCleared(t, w)
 }
 
 func TestDeleteMe(t *testing.T) {
@@ -762,7 +754,7 @@ func TestRefresh_UsernameFromUsersTable(t *testing.T) {
 	refresh, _ := env.issueTokens(email, "device")
 	db.seedUsername(email, "New Name")
 
-	req := httptest.NewRequest(http.MethodPost, "/refresh", nil)
+	req := httptest.NewRequest(http.MethodPost, "/sessions/current/tokens", nil)
 	req.AddCookie(&http.Cookie{Name: "refresh_token", Value: refresh})
 	w := env.do(req)
 	if w.Code != http.StatusOK {
@@ -818,7 +810,7 @@ func TestRefreshAccess_UsernameFromUsersTable(t *testing.T) {
 	refresh, _ := env.issueTokens(email, "device")
 
 	body, _ := json.Marshal(map[string]string{"refresh_token": refresh})
-	req := httptest.NewRequest(http.MethodPost, "/refresh-access", bytes.NewReader(body))
+	req := httptest.NewRequest(http.MethodPost, "/sessions/current/access-token", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := env.do(req)
 	if w.Code != http.StatusOK {
@@ -959,8 +951,15 @@ func TestCallback_RegistrationUsesProviderName(t *testing.T) {
 	}
 }
 
-func refreshAt(env *testEnv, path, token string) *httptest.ResponseRecorder {
-	req := httptest.NewRequest(http.MethodPost, path, nil)
+const (
+	routeTokens         = "POST /sessions/current/tokens"
+	routeAccessToken    = "POST /sessions/current/access-token"
+	routeCurrentSession = "GET /sessions/current"
+)
+
+func refreshAt(env *testEnv, route, token string) *httptest.ResponseRecorder {
+	method, path, _ := strings.Cut(route, " ")
+	req := httptest.NewRequest(method, path, nil)
 	req.AddCookie(&http.Cookie{Name: "refresh_token", Value: token})
 	return env.do(req)
 }
@@ -975,14 +974,12 @@ func TestAuthErrorHeader(t *testing.T) {
 	const email = "header@example.com"
 
 	endpoints := map[string]func(env *testEnv, refreshToken, accessToken string) *httptest.ResponseRecorder{
-		"/refresh": func(env *testEnv, r, _ string) *httptest.ResponseRecorder { return refreshAt(env, "/refresh", r) },
-		"/refresh-access": func(env *testEnv, r, _ string) *httptest.ResponseRecorder {
-			return refreshAt(env, "/refresh-access", r)
+		routeTokens:      func(env *testEnv, r, _ string) *httptest.ResponseRecorder { return refreshAt(env, routeTokens, r) },
+		routeAccessToken: func(env *testEnv, r, _ string) *httptest.ResponseRecorder { return refreshAt(env, routeAccessToken, r) },
+		routeCurrentSession: func(env *testEnv, r, _ string) *httptest.ResponseRecorder {
+			return refreshAt(env, routeCurrentSession, r)
 		},
-		"/refresh-status": func(env *testEnv, r, _ string) *httptest.ResponseRecorder {
-			return refreshAt(env, "/refresh-status", r)
-		},
-		"/verify": func(env *testEnv, _, a string) *httptest.ResponseRecorder { return verifyWith(env, a) },
+		"GET /verify": func(env *testEnv, _, a string) *httptest.ResponseRecorder { return verifyWith(env, a) },
 	}
 	cases := []struct {
 		name   string
@@ -1026,8 +1023,8 @@ func TestRefresh_RevokedTokenDeletesDevice(t *testing.T) {
 	const email = "reuse@example.com"
 	const secret = "test-device-secret"
 
-	for _, path := range []string{"/refresh", "/refresh-access", "/refresh-status"} {
-		t.Run(path, func(t *testing.T) {
+	for _, route := range []string{routeTokens, routeAccessToken, routeCurrentSession} {
+		t.Run(route, func(t *testing.T) {
 			stub := newOAuthStub("", "", "")
 			defer stub.Close()
 
@@ -1039,7 +1036,7 @@ func TestRefresh_RevokedTokenDeletesDevice(t *testing.T) {
 			staleToken, _ := env.jwtManager.GenerateRefresh(email, deviceID, secret, 1)
 			db.UpdateDeviceSecret(deviceID)
 
-			w := refreshAt(env, path, staleToken)
+			w := refreshAt(env, route, staleToken)
 			if w.Code != http.StatusUnauthorized {
 				t.Fatalf("want 401, got %d: %s", w.Code, w.Body.String())
 			}
