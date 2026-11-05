@@ -2,8 +2,8 @@
 
 ## 登入流程
 
-1. `GET /login` 回傳 `{ "url": "..." }`，將使用者導向 `url`
-   - `?redirect_uri=` 可從 `OAUTH2_ALLOWED_REDIRECT_URLS` 擇一作為 redirect URL，未帶時使用 `OAUTH2_REDIRECT_URL`
+1. `POST /sessions` 回傳 `{ "url": "..." }`，將使用者導向 `url`
+   - JSON body 的 `redirect_uri` 可從 `OAUTH2_ALLOWED_REDIRECT_URLS` 擇一作為 redirect URL，未帶時使用 `OAUTH2_REDIRECT_URL`
    - Server 產生 PKCE verifier，連同 redirect URL 以一次性 `state` 為 key 儲存（有 `REDIS_URL` 存 Redis，否則存記憶體）
 2. Provider 導向 redirect URL，該頁面將 `code`、`state` 帶到 `GET /callback?code=...&state=...`
    - Server 用 `state` 取出 verifier 與 redirect URL 後立即刪除，防止重放，再交換 code
@@ -16,7 +16,7 @@
 | `X-Device-Name` | Device session 名稱（預設 `Unknown Device`） |
 | `X-PKCE-Verifier` | `OAUTH2_CLIENT_PKCE=true` 時必填 |
 
-`OAUTH2_CLIENT_PKCE=true` 適用於 client 自行處理 PKCE：`/login` 多回傳 `verifier`，client 透過 `X-PKCE-Verifier` 帶回
+`OAUTH2_CLIENT_PKCE=true` 適用於 client 自行處理 PKCE：`POST /sessions` 多回傳 `verifier`，client 透過 `X-PKCE-Verifier` 帶回
 
 ## Token
 
@@ -24,9 +24,9 @@
   - Claim 含 `user_email`、`device_id`、`username`
 - **Refresh token**：讀自 `refresh_token` cookie 或 JSON body `{ "refresh_token": "..." }`
   - Cookie 為 `HttpOnly`、`SameSite=Lax`，與 token 同時到期
-  - 讀不到 cookie 的頁面可由 `/refresh-status` 取得到期時間
-- **Rotation**：每次 `/refresh` 簽發新 token、舊的失效，使用中的 session 持續延長
-  - 同一 token 並行 `/refresh` 共用同一次 rotation（有 Redis 時跨實例也成立）
+  - 讀不到 cookie 的頁面可由 `GET /sessions/current` 取得到期時間
+- **Rotation**：每次 `POST /sessions/current/tokens` 簽發新 token、舊的失效，使用中的 session 持續延長
+  - 同一 token 並行 rotation 共用同一次 rotation（有 Redis 時跨實例也成立）
 - **重複使用偵測**：送出已 rotate 的舊 token 視為外洩，刪除該 device session
 - **Username 更新**：登入與每次 refresh 都重讀 `username`，最晚一個 access token 有效期後生效
 

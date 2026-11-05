@@ -14,8 +14,8 @@ Device-bound session 認證 server
 
 ```
                ┌──────────────────────── server ────────────────────────┐
- browser ───▶   /login, /callback ──▶ OAuth2.0 / OIDC provider
- proxy   ───▶   /verify, /refresh ──▶ jwt ──▶ database ──▶ PostgreSQL
+ browser ───▶   POST /sessions, /callback ──▶ OAuth2.0 / OIDC provider
+ proxy   ───▶   /verify, /sessions ──▶ jwt ──▶ database ──▶ PostgreSQL
                └────────────────────────────────────────────────────────┘
 ```
 
@@ -53,7 +53,7 @@ docker compose -f docker-dev/docker-compose.yml up --build -d
 | **條件** | 未設 `DATABASE_URL` | 只設 `DATABASE_URL` | 兩者都設 |
 | **Users table** | 無 | `users`，由本 server 管理 | 你的 table，以 email 參照 |
 | **Session token** | 無，直接回傳 provider token | 有 | 有 |
-| **`/refresh`、`/verify`、`/logout`** | ✗ | ✓ | ✓ |
+| **`/sessions/current`、`/verify`** | ✗ | ✓ | ✓ |
 | **`ALLOW_REGISTRATION`** | 無效 | 新使用者 insert 到 `users` | 無效（啟動時警告） |
 | **`DELETE /users/me`** | ✗ | 刪除使用者與所有 session | ✗ |
 | **`username` claim** | — | `users.username` | `DB_USER_USERNAME_COLUMN`，未設則為空 |

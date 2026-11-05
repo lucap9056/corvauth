@@ -3,19 +3,19 @@
 - JSON 回應格式：`{ "success": bool, "message": ... }`
 - 錯誤時 `success` 為 `false`，`message` 為字串
 - Token 缺少或無效：`401` + `WWW-Authenticate: Bearer`
-- Refresh token 輸入：`refresh_token` cookie，沒有 cookie 時改讀 JSON body `{ "refresh_token": "..." }`
+- Refresh token 輸入：`refresh_token` cookie，沒有 cookie 時改讀 JSON body `{ "refresh_token": "..." }`（`GET /sessions/current` 改讀 `Authorization: Bearer`，不讀 body）
 
 | Endpoint | 提供於 | 輸入 | 成功時 |
 |---|---|---|---|
 | [`GET /health`](#get-health) | 所有模式 | — | `200` |
-| [`GET /login`](#get-login) | 所有模式 | `redirect_uri` query（選填） | `200` |
+| [`POST /sessions`](#post-sessions) | 所有模式 | `redirect_uri` body（選填） | `200` |
 | [`GET /callback`](#get-callback) | 所有模式 | `code`、`state` query | `200` |
-| [`POST /refresh`](#post-refresh) | session 模式 | `refresh_token` cookie 或 body | `200`，設定 cookie |
-| [`POST /refresh-access`](#post-refresh-access) | session 模式 | `refresh_token` cookie 或 body | `200` |
-| [`POST /refresh-status`](#post-refresh-status) | session 模式 | `refresh_token` cookie 或 body | `200`，不 rotate |
+| [`POST /sessions/current/tokens`](#post-sessionscurrenttokens) | session 模式 | `refresh_token` cookie 或 body | `200`，設定 cookie |
+| [`POST /sessions/current/access-token`](#post-sessionscurrentaccess-token) | session 模式 | `refresh_token` cookie 或 body | `200` |
+| [`GET /sessions/current`](#get-sessionscurrent) | session 模式 | `refresh_token` cookie 或 `Authorization: Bearer` refresh token | `200`，不 rotate |
 | [`GET /verify`](#get-verify) | session 模式 | `Authorization: Bearer` access token | `204` + 使用者 header |
 | [`GET /verify-optional`](#get-verify-optional) | session 模式 | `Authorization: Bearer` access token，有帶才檢查 | `204`，登入時才帶使用者 header |
-| [`POST /logout`](#post-logout) | session 模式 | `refresh_token` cookie 或 body（選填） | `200`，刪除 device session 並清除 cookie |
+| [`DELETE /sessions/current`](#delete-sessionscurrent) | session 模式 | `refresh_token` cookie 或 body（選填） | `200`，刪除 device session 並清除 cookie |
 | [`DELETE /users/me`](#delete-usersme) | managed users | `Authorization: Bearer` access token | `200`，刪除所有 session 與該使用者，並清除 cookie |
 
 ## `GET /health`
@@ -26,7 +26,17 @@
 OK
 ```
 
-## `GET /login`
+## `POST /sessions`
+
+發起登入，device session 由 `/callback` 建立
+
+Request（選填）：
+
+```json
+{
+  "redirect_uri": "https://app.example.com/callback"
+}
+```
 
 - `redirect_uri`：必須與 `OAUTH2_REDIRECT_URL` 或 `OAUTH2_ALLOWED_REDIRECT_URLS` 其中一項完全相同，否則 `400`；未帶時使用 `OAUTH2_REDIRECT_URL`，未設定則 `400`
 
@@ -67,7 +77,9 @@ Stateless proxy 在 `PASS_OAUTH_TOKEN=true` 時改把 token 放在 header（見 
 }
 ```
 
-## `POST /refresh`
+## `POST /sessions/current/tokens`
+
+Rotate refresh token
 
 Request：`refresh_token` cookie，或 body：
 
@@ -89,7 +101,9 @@ Response：
 }
 ```
 
-## `POST /refresh-access`
+## `POST /sessions/current/access-token`
+
+簽發新的 access token，不 rotate refresh token
 
 Request：`refresh_token` cookie，或 body：
 
@@ -108,15 +122,9 @@ Response，`message` 為新的 access token：
 }
 ```
 
-## `POST /refresh-status`
+## `GET /sessions/current`
 
-Request：`refresh_token` cookie，或 body：
-
-```json
-{
-  "refresh_token": "..."
-}
-```
+Request：`refresh_token` cookie，沒有 cookie 時改讀 `Authorization: Bearer <refresh_token>`；不讀 body
 
 Response：
 
@@ -147,7 +155,7 @@ Response：
 - 有 `Authorization: Bearer`：與 `/verify` 相同檢查，token 無效或過期同樣回 `401`，client 仍會去 refresh
 - upstream 以「沒有使用者 header」判定匿名，proxy 必須覆寫或清除 client 自帶的同名 header
 
-## `POST /logout`
+## `DELETE /sessions/current`
 
 Request（選填）：`refresh_token` cookie，或 body：
 
@@ -211,7 +219,7 @@ Identity token 以 `HS256` 簽章，header `typ` 為 `identity+jwt`：
 
 ## Error Header
 
-`401` 由 device session 造成時，`/refresh`、`/refresh-access`、`/refresh-status`、`/verify`、`/verify-optional`、`DELETE /users/me` 會帶 `X-Auth-Error`，讓 gateway 與過期或格式錯誤的 token 區分：
+`401` 由 device session 造成時，`/sessions/current/tokens`、`/sessions/current/access-token`、`GET /sessions/current`、`/verify`、`/verify-optional`、`DELETE /users/me` 會帶 `X-Auth-Error`，讓 gateway 與過期或格式錯誤的 token 區分：
 
 | 值 | 原因 |
 |---|---|

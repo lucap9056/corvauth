@@ -2,8 +2,8 @@
 
 ## Login Flow
 
-1. `GET /login` returns `{ "url": "..." }`; redirect the user there
-   - `?redirect_uri=` picks a redirect URL from `OAUTH2_ALLOWED_REDIRECT_URLS`; omitted: `OAUTH2_REDIRECT_URL`
+1. `POST /sessions` returns `{ "url": "..." }`; redirect the user there
+   - `redirect_uri` in the JSON body picks a redirect URL from `OAUTH2_ALLOWED_REDIRECT_URLS`; omitted: `OAUTH2_REDIRECT_URL`
    - The server generates a PKCE verifier and stores it with the redirect URL under a one-time `state` (Redis if `REDIS_URL` is set, otherwise memory)
 2. The provider redirects to the redirect URL, whose page passes `code` and `state` to `GET /callback?code=...&state=...`
    - The server takes the verifier and redirect URL by `state`, deletes it to prevent replay, then exchanges the code
@@ -16,7 +16,7 @@ Optional `/callback` request headers:
 | `X-Device-Name` | Device session name (default `Unknown Device`) |
 | `X-PKCE-Verifier` | Required when `OAUTH2_CLIENT_PKCE=true` |
 
-`OAUTH2_CLIENT_PKCE=true` is for clients that drive PKCE themselves: `/login` also returns `verifier`, which the client sends back in `X-PKCE-Verifier`
+`OAUTH2_CLIENT_PKCE=true` is for clients that drive PKCE themselves: `POST /sessions` also returns `verifier`, which the client sends back in `X-PKCE-Verifier`
 
 ## Tokens
 
@@ -24,9 +24,9 @@ Optional `/callback` request headers:
   - Claims include `user_email`, `device_id`, `username`
 - **Refresh token**: read from the `refresh_token` cookie or JSON body `{ "refresh_token": "..." }`
   - Cookie is `HttpOnly`, `SameSite=Lax`, and expires with the token
-  - Pages that cannot read the cookie get its expiry from `/refresh-status`
-- **Rotation**: each `/refresh` issues a new token and invalidates the old one, so active sessions keep extending
-  - Concurrent `/refresh` calls with the same token share one rotation (across instances with Redis)
+  - Pages that cannot read the cookie get its expiry from `GET /sessions/current`
+- **Rotation**: each `POST /sessions/current/tokens` issues a new token and invalidates the old one, so active sessions keep extending
+  - Concurrent rotation calls with the same token share one rotation (across instances with Redis)
 - **Reuse detection**: an already-rotated token is treated as theft and deletes the device session
 - **Username updates**: `username` is re-read on login and every refresh; renames apply within one access token lifetime
 

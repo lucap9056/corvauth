@@ -10,7 +10,7 @@ Invalid values stop the server on startup
 |---|---|---|
 | `HTTP_ADDRESS` | `:80` | Listen address; `unix:///path/to.sock` listens on a Unix socket |
 | `HTTP_MODE` | `production` | `development` drops `Secure` from the `refresh_token` cookie, for local HTTP testing |
-| `REDIS_URL` | — | Stores `state`, caches device secrets, dedupes `/callback` and `/refresh` across instances; unset: in-memory, single instance only |
+| `REDIS_URL` | — | Stores `state`, caches device secrets, dedupes `/callback` and refresh token rotation across instances; unset: in-memory, single instance only |
 
 ## OAuth2.0 Provider
 
@@ -20,8 +20,8 @@ Invalid values stop the server on startup
 | Variable | Description |
 |---|---|
 | `OAUTH2_CLIENT_ID`, `OAUTH2_CLIENT_SECRET` | Client credentials; OAuth2.0 is enabled only when both are set along with `OAUTH2_REDIRECT_URL` or `OAUTH2_ALLOWED_REDIRECT_URLS` |
-| `OAUTH2_REDIRECT_URL` | Default redirect URL when `/login` omits `redirect_uri` |
-| `OAUTH2_ALLOWED_REDIRECT_URLS` | Comma-separated redirect URLs `/login` may request via `redirect_uri`, matched exactly; each must also be registered with the provider |
+| `OAUTH2_REDIRECT_URL` | Default redirect URL when `POST /sessions` omits `redirect_uri` |
+| `OAUTH2_ALLOWED_REDIRECT_URLS` | Comma-separated redirect URLs `POST /sessions` may request via `redirect_uri`, matched exactly; each must also be registered with the provider |
 | `OAUTH2_PROVIDER` | `discord`, `github`, `google`, or any other name (generic) |
 | `OAUTH2_SCOPES` | Comma-separated scopes |
 | `OAUTH2_AUTH_URL`, `OAUTH2_TOKEN_URL`, `OAUTH2_USERINFO_URL` | Required for the generic provider |

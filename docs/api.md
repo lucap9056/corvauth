@@ -3,19 +3,19 @@
 - JSON responses use `{ "success": bool, "message": ... }`
 - Errors return `success: false` with a string `message`
 - Missing or invalid token: `401` + `WWW-Authenticate: Bearer`
-- Refresh token input: the `refresh_token` cookie, or a JSON body `{ "refresh_token": "..." }` when the cookie is absent
+- Refresh token input: the `refresh_token` cookie, or a JSON body `{ "refresh_token": "..." }` when the cookie is absent (`GET /sessions/current` reads `Authorization: Bearer` instead of the body)
 
 | Endpoint | Available in | Input | Success |
 |---|---|---|---|
 | [`GET /health`](#get-health) | all modes | — | `200` |
-| [`GET /login`](#get-login) | all modes | `redirect_uri` query (optional) | `200` |
+| [`POST /sessions`](#post-sessions) | all modes | `redirect_uri` body (optional) | `200` |
 | [`GET /callback`](#get-callback) | all modes | `code`, `state` query | `200` |
-| [`POST /refresh`](#post-refresh) | session modes | `refresh_token` cookie or body | `200`, sets cookie |
-| [`POST /refresh-access`](#post-refresh-access) | session modes | `refresh_token` cookie or body | `200` |
-| [`POST /refresh-status`](#post-refresh-status) | session modes | `refresh_token` cookie or body | `200`, no rotation |
+| [`POST /sessions/current/tokens`](#post-sessionscurrenttokens) | session modes | `refresh_token` cookie or body | `200`, sets cookie |
+| [`POST /sessions/current/access-token`](#post-sessionscurrentaccess-token) | session modes | `refresh_token` cookie or body | `200` |
+| [`GET /sessions/current`](#get-sessionscurrent) | session modes | `refresh_token` cookie or `Authorization: Bearer` refresh token | `200`, no rotation |
 | [`GET /verify`](#get-verify) | session modes | `Authorization: Bearer` access token | `204` + user headers |
 | [`GET /verify-optional`](#get-verify-optional) | session modes | `Authorization: Bearer` access token, checked only when present | `204`, user headers only when signed in |
-| [`POST /logout`](#post-logout) | session modes | `refresh_token` cookie or body (optional) | `200`, deletes the device session, clears the cookie |
+| [`DELETE /sessions/current`](#delete-sessionscurrent) | session modes | `refresh_token` cookie or body (optional) | `200`, deletes the device session, clears the cookie |
 | [`DELETE /users/me`](#delete-usersme) | managed users | `Authorization: Bearer` access token | `200`, deletes all sessions and the user, clears the cookie |
 
 ## `GET /health`
@@ -26,7 +26,17 @@ Plain text:
 OK
 ```
 
-## `GET /login`
+## `POST /sessions`
+
+Starts a login; the device session is created by `/callback`
+
+Request (optional):
+
+```json
+{
+  "redirect_uri": "https://app.example.com/callback"
+}
+```
 
 - `redirect_uri`: must exactly match `OAUTH2_REDIRECT_URL` or an entry in `OAUTH2_ALLOWED_REDIRECT_URLS`, otherwise `400`; omitted: `OAUTH2_REDIRECT_URL`, or `400` when unset
 
@@ -67,7 +77,9 @@ Stateless proxy with `PASS_OAUTH_TOKEN=true` moves the tokens to headers instead
 }
 ```
 
-## `POST /refresh`
+## `POST /sessions/current/tokens`
+
+Rotates the refresh token
 
 Request: `refresh_token` cookie, or body:
 
@@ -89,7 +101,9 @@ Response:
 }
 ```
 
-## `POST /refresh-access`
+## `POST /sessions/current/access-token`
+
+Issues a new access token without rotating the refresh token
 
 Request: `refresh_token` cookie, or body:
 
@@ -108,15 +122,9 @@ Response, `message` is the new access token:
 }
 ```
 
-## `POST /refresh-status`
+## `GET /sessions/current`
 
-Request: `refresh_token` cookie, or body:
-
-```json
-{
-  "refresh_token": "..."
-}
-```
+Request: `refresh_token` cookie, or `Authorization: Bearer <refresh_token>` when the cookie is absent; the body is ignored
 
 Response:
 
@@ -147,7 +155,7 @@ For routes that also allow anonymous access; only requests with an `Authorizatio
 - With `Authorization: Bearer`: checked the same way as `/verify`, including the `401` for an invalid or expired token, so clients still refresh
 - Upstreams treat missing user headers as anonymous, so the proxy must overwrite or strip client-supplied copies of them
 
-## `POST /logout`
+## `DELETE /sessions/current`
 
 Request (optional): `refresh_token` cookie, or body:
 
@@ -211,7 +219,7 @@ The identity token is signed with `HS256`, header `typ`: `identity+jwt`:
 
 ## Error Headers
 
-When a `401` is caused by the device session, `/refresh`, `/refresh-access`, `/refresh-status`, `/verify`, `/verify-optional`, and `DELETE /users/me` add `X-Auth-Error`, so a gateway can tell it apart from expired or malformed tokens:
+When a `401` is caused by the device session, `/sessions/current/tokens`, `/sessions/current/access-token`, `GET /sessions/current`, `/verify`, `/verify-optional`, and `DELETE /users/me` add `X-Auth-Error`, so a gateway can tell it apart from expired or malformed tokens:
 
 | Value | Cause |
 |---|---|

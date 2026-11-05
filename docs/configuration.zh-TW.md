@@ -10,7 +10,7 @@
 |---|---|---|
 | `HTTP_ADDRESS` | `:80` | 監聽位址，`unix:///path/to.sock` 改聽 Unix socket |
 | `HTTP_MODE` | `production` | `development` 時 `refresh_token` cookie 不標 `Secure`，供本機 HTTP 測試 |
-| `REDIS_URL` | — | 存 `state`、快取 device secret、跨實例去重 `/callback` 與 `/refresh`，未設則用記憶體，僅限單一實例 |
+| `REDIS_URL` | — | 存 `state`、快取 device secret、跨實例去重 `/callback` 與 refresh token rotation，未設則用記憶體，僅限單一實例 |
 
 ## OAuth2.0 Provider
 
@@ -20,8 +20,8 @@
 | 變數 | 說明 |
 |---|---|
 | `OAUTH2_CLIENT_ID`、`OAUTH2_CLIENT_SECRET` | Client credentials，兩者都設且設定 `OAUTH2_REDIRECT_URL` 或 `OAUTH2_ALLOWED_REDIRECT_URLS` 才啟用 OAuth2.0 |
-| `OAUTH2_REDIRECT_URL` | `/login` 未帶 `redirect_uri` 時的預設 redirect URL |
-| `OAUTH2_ALLOWED_REDIRECT_URLS` | 逗號分隔，`/login` 可透過 `redirect_uri` 指定的 redirect URL，須完全相同；每個也都要在 provider 註冊 |
+| `OAUTH2_REDIRECT_URL` | `POST /sessions` 未帶 `redirect_uri` 時的預設 redirect URL |
+| `OAUTH2_ALLOWED_REDIRECT_URLS` | 逗號分隔，`POST /sessions` 可透過 `redirect_uri` 指定的 redirect URL，須完全相同；每個也都要在 provider 註冊 |
 | `OAUTH2_PROVIDER` | `discord`、`github`、`google`，或其他名稱（generic） |
 | `OAUTH2_SCOPES` | 逗號分隔的 scope |
 | `OAUTH2_AUTH_URL`、`OAUTH2_TOKEN_URL`、`OAUTH2_USERINFO_URL` | Generic provider 必填 |
