@@ -2,6 +2,7 @@ package database
 
 import (
 	"errors"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgconn"
 )
@@ -14,11 +15,36 @@ const (
 var ErrUserNotFound = errors.New("user not found")
 
 type UserDevice struct {
-	UserEmail  string `json:"user_email"`
-	DeviceID   string `json:"device_id"`
-	DeviceName string `json:"device_name"`
-	Secret     string `json:"secret,omitempty"`
-	UpdatedAt  string `json:"updated_at,omitempty"`
+	DeviceID   string
+	DeviceName string
+	UpdatedAt  time.Time
+}
+
+func (d *Database) ListDevices(userEmail string) ([]UserDevice, error) {
+	query := `
+	SELECT device_id, device_name, updated_at
+	FROM auth_user_devices
+	WHERE user_email = $1
+	ORDER BY updated_at DESC, device_id;
+	`
+	rows, err := d.db.Query(query, userEmail)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var devices []UserDevice
+	for rows.Next() {
+		var device UserDevice
+		if err := rows.Scan(&device.DeviceID, &device.DeviceName, &device.UpdatedAt); err != nil {
+			return nil, err
+		}
+		devices = append(devices, device)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return devices, nil
 }
 
 func (d *Database) SaveDeviceSecret(userEmail, deviceName, secret string) (string, error) {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
 )
@@ -33,6 +34,21 @@ func TestDeleteAllDevices_RowError(t *testing.T) {
 			RowError(1, errors.New("row failed")))
 
 	if _, err := d.DeleteAllDevices("user@example.com"); err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
+func TestListDevices_RowError(t *testing.T) {
+	d, mock := newMockDB(t)
+
+	mock.ExpectQuery(`SELECT device_id, device_name, updated_at`).
+		WithArgs("user@example.com").
+		WillReturnRows(sqlmock.NewRows([]string{"device_id", "device_name", "updated_at"}).
+			AddRow("dev-1", "phone", time.Now()).
+			AddRow("dev-2", "laptop", time.Now()).
+			RowError(1, errors.New("row failed")))
+
+	if _, err := d.ListDevices("user@example.com"); err == nil {
 		t.Fatal("expected error, got nil")
 	}
 }

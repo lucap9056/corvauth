@@ -254,6 +254,22 @@ func TestDeleteAllDevices_OnlyTargetUser(t *testing.T) {
 	}
 }
 
+func TestListDevices_NewestFirst(t *testing.T) {
+	env, d := newTestDatabase(t, "target@example.com", "other@example.com")
+	older := mustSaveDevice(t, d, "target@example.com")
+	newer := mustSaveDevice(t, d, "target@example.com")
+	mustSaveDevice(t, d, "other@example.com")
+	env.exec(t, "UPDATE auth_user_devices SET updated_at = updated_at - INTERVAL '1 hour' WHERE device_id = $1", older)
+
+	got, err := d.ListDevices("target@example.com")
+	if err != nil {
+		t.Fatalf("ListDevices: %v", err)
+	}
+	if len(got) != 2 || got[0].DeviceID != newer || got[1].DeviceID != older {
+		t.Errorf("devices: got %+v, want [%s %s]", got, newer, older)
+	}
+}
+
 func TestUserDeletion_CascadesToDevices(t *testing.T) {
 	env, d := newTestDatabase(t, "user@example.com")
 	deviceID := mustSaveDevice(t, d, "user@example.com")

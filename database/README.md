@@ -113,6 +113,7 @@ CREATE INDEX IF NOT EXISTS idx_auth_user_devices_updated_at ON auth_user_devices
 | `SaveDeviceSecret(userEmail, deviceName, secret)` | Creates a device and returns its `device_id`; `ErrUserNotFound` if the email is not in the users table |
 | `GetDeviceSecret(deviceID)` | Returns `secret` and current `generation` |
 | `UpdateDeviceSecret(deviceID)` | Increments `generation`, refreshes `updated_at`, returns the new `generation` |
+| `ListDevices(userEmail)` | Returns the user's devices as `UserDevice` (`DeviceID`, `DeviceName`, `UpdatedAt`), most recently updated first |
 | `DeleteDevice(userEmail, deviceID)` | Deletes one of the user's devices |
 | `DeleteAllDevices(userEmail)` | Deletes all of the user's devices and returns their IDs |
 | `Close()` | Stops the cleanup worker; closes the pool only if `NewDatabase` opened it |

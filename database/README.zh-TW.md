@@ -113,6 +113,7 @@ CREATE INDEX IF NOT EXISTS idx_auth_user_devices_updated_at ON auth_user_devices
 | `SaveDeviceSecret(userEmail, deviceName, secret)` | 建立 device 並回傳 `device_id`，email 不在 users table 時回傳 `ErrUserNotFound` |
 | `GetDeviceSecret(deviceID)` | 回傳 `secret` 與目前 `generation` |
 | `UpdateDeviceSecret(deviceID)` | `generation` 加 1、更新 `updated_at`，回傳新 `generation` |
+| `ListDevices(userEmail)` | 以 `UserDevice`（`DeviceID`、`DeviceName`、`UpdatedAt`）回傳該使用者所有 device，最近更新的在前 |
 | `DeleteDevice(userEmail, deviceID)` | 刪除該使用者的單一 device |
 | `DeleteAllDevices(userEmail)` | 刪除該使用者所有 device 並回傳 ID |
 | `Close()` | 停止 cleanup worker，pool 由 `NewDatabase` 開啟時才一併關閉 |
