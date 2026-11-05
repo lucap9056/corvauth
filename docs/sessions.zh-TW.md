@@ -35,7 +35,7 @@
 `PASS_OAUTH_TOKEN` 決定 session 模式下 provider token 的處理：
 
 - `false`（預設）：登入後立即 revoke 並捨棄
-- `true`：以 `/callback` 的 `X-Forwarded-Access-Token`、`X-Forwarded-Refresh-Token` header 回傳，由 client 保管
+- `true`：以 `/callback` 的 `X-Corvauth-Provider-Access-Token`、`X-Corvauth-Provider-Refresh-Token` header 回傳，名稱由 `PROVIDER_ACCESS_TOKEN_HEADER`、`PROVIDER_REFRESH_TOKEN_HEADER` 設定（見[登入政策](configuration.zh-TW.md#登入政策)），由 client 保管
 
 Stateless proxy 一定回傳 provider token：
 

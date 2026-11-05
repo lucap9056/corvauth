@@ -74,3 +74,5 @@
 | `ALLOW_REGISTRATION` | `false` | 首次登入的使用者 insert 到 `users`（僅 managed users） |
 | `ALLOW_UNVERIFIED_EMAIL` | `false` | 接受未驗證的 email，預設要求 `email_verified` 為 true |
 | `PASS_OAUTH_TOKEN` | `false` | 將 provider token 回傳給 client（見 [Provider Token](sessions.zh-TW.md#provider-token)） |
+| `PROVIDER_ACCESS_TOKEN_HEADER` | `X-Corvauth-Provider-Access-Token` | `PASS_OAUTH_TOKEN=true` 時放 provider access token 的 header |
+| `PROVIDER_REFRESH_TOKEN_HEADER` | `X-Corvauth-Provider-Refresh-Token` | `PASS_OAUTH_TOKEN=true` 時放 provider refresh token 的 header；須為合法 header 名稱，且與 access token header 不同（不分大小寫） |

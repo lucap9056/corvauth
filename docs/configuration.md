@@ -74,3 +74,5 @@ Names of the user headers `/verify` returns; only this server may produce them, 
 | `ALLOW_REGISTRATION` | `false` | Insert first-time users into `users` (managed users only) |
 | `ALLOW_UNVERIFIED_EMAIL` | `false` | Accept unverified emails; by default `email_verified` must be true |
 | `PASS_OAUTH_TOKEN` | `false` | Return provider tokens to the client (see [Provider Tokens](sessions.md#provider-tokens)) |
+| `PROVIDER_ACCESS_TOKEN_HEADER` | `X-Corvauth-Provider-Access-Token` | Header carrying the provider access token when `PASS_OAUTH_TOKEN=true` |
+| `PROVIDER_REFRESH_TOKEN_HEADER` | `X-Corvauth-Provider-Refresh-Token` | Header carrying the provider refresh token when `PASS_OAUTH_TOKEN=true`; must be a valid header name different from the access token header (case-insensitive) |

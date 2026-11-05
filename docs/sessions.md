@@ -35,7 +35,7 @@ Optional `/callback` request headers:
 In session modes, `PASS_OAUTH_TOKEN` decides what happens to the provider's tokens:
 
 - `false` (default): revoked and discarded right after login
-- `true`: returned in the `X-Forwarded-Access-Token` and `X-Forwarded-Refresh-Token` headers of `/callback`; the client keeps them
+- `true`: returned in the `X-Corvauth-Provider-Access-Token` and `X-Corvauth-Provider-Refresh-Token` headers of `/callback`, names set by `PROVIDER_ACCESS_TOKEN_HEADER` / `PROVIDER_REFRESH_TOKEN_HEADER` (see [Sign-in Policy](configuration.md#sign-in-policy)); the client keeps them
 
 Stateless proxy always returns them:
 
