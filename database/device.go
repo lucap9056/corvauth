@@ -76,13 +76,7 @@ func (d *Database) DeleteDevice(userEmail, deviceID string) error {
 	return err
 }
 
-func (d *Database) DeleteAllDevices(userEmail string) error {
-	query := `DELETE FROM auth_user_devices WHERE user_email = $1`
-	_, err := d.db.Exec(query, userEmail)
-	return err
-}
-
-func (d *Database) DeleteAllDevicesReturningIDs(userEmail string) ([]string, error) {
+func (d *Database) DeleteAllDevices(userEmail string) ([]string, error) {
 	query := `DELETE FROM auth_user_devices WHERE user_email = $1 RETURNING device_id`
 	rows, err := d.db.Query(query, userEmail)
 	if err != nil {

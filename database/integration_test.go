@@ -234,36 +234,15 @@ func TestDeleteDevice_RequiresOwner(t *testing.T) {
 
 func TestDeleteAllDevices_OnlyTargetUser(t *testing.T) {
 	_, d := newTestDatabase(t, "target@example.com", "other@example.com")
-	targetDevices := []string{
-		mustSaveDevice(t, d, "target@example.com"),
-		mustSaveDevice(t, d, "target@example.com"),
-	}
-	otherDevice := mustSaveDevice(t, d, "other@example.com")
-
-	if err := d.DeleteAllDevices("target@example.com"); err != nil {
-		t.Fatalf("DeleteAllDevices: %v", err)
-	}
-	for _, deviceID := range targetDevices {
-		if deviceExists(t, d, deviceID) {
-			t.Errorf("device %s still exists", deviceID)
-		}
-	}
-	if !deviceExists(t, d, otherDevice) {
-		t.Error("device of another user was deleted")
-	}
-}
-
-func TestDeleteAllDevicesReturningIDs_OnlyTargetUser(t *testing.T) {
-	_, d := newTestDatabase(t, "target@example.com", "other@example.com")
 	want := []string{
 		mustSaveDevice(t, d, "target@example.com"),
 		mustSaveDevice(t, d, "target@example.com"),
 	}
 	otherDevice := mustSaveDevice(t, d, "other@example.com")
 
-	got, err := d.DeleteAllDevicesReturningIDs("target@example.com")
+	got, err := d.DeleteAllDevices("target@example.com")
 	if err != nil {
-		t.Fatalf("DeleteAllDevicesReturningIDs: %v", err)
+		t.Fatalf("DeleteAllDevices: %v", err)
 	}
 	slices.Sort(got)
 	slices.Sort(want)
@@ -292,9 +271,9 @@ func TestUserEmailChange_CascadesToDevices(t *testing.T) {
 
 	env.exec(t, "UPDATE users SET email = $1 WHERE email = $2", "new@example.com", "old@example.com")
 
-	deleted, err := d.DeleteAllDevicesReturningIDs("new@example.com")
+	deleted, err := d.DeleteAllDevices("new@example.com")
 	if err != nil {
-		t.Fatalf("DeleteAllDevicesReturningIDs: %v", err)
+		t.Fatalf("DeleteAllDevices: %v", err)
 	}
 	if !slices.Equal(deleted, []string{deviceID}) {
 		t.Errorf("devices under new email: got %v, want [%s]", deleted, deviceID)

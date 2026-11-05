@@ -114,6 +114,5 @@ CREATE INDEX IF NOT EXISTS idx_auth_user_devices_updated_at ON auth_user_devices
 | `GetDeviceSecret(deviceID)` | 回傳 `secret` 與目前 `generation` |
 | `UpdateDeviceSecret(deviceID)` | `generation` 加 1、更新 `updated_at`，回傳新 `generation` |
 | `DeleteDevice(userEmail, deviceID)` | 刪除該使用者的單一 device |
-| `DeleteAllDevices(userEmail)` | 刪除該使用者所有 device |
-| `DeleteAllDevicesReturningIDs(userEmail)` | 刪除該使用者所有 device 並回傳 ID |
+| `DeleteAllDevices(userEmail)` | 刪除該使用者所有 device 並回傳 ID |
 | `Close()` | 停止 cleanup worker，pool 由 `NewDatabase` 開啟時才一併關閉 |

@@ -22,7 +22,7 @@ func newMockDB(t *testing.T) (*Database, sqlmock.Sqlmock) {
 	return &Database{db: db, ctx: ctx, cancel: cancel}, mock
 }
 
-func TestDeleteAllDevicesReturningIDs_RowError(t *testing.T) {
+func TestDeleteAllDevices_RowError(t *testing.T) {
 	d, mock := newMockDB(t)
 
 	mock.ExpectQuery(`DELETE FROM auth_user_devices`).
@@ -32,7 +32,7 @@ func TestDeleteAllDevicesReturningIDs_RowError(t *testing.T) {
 			AddRow("dev-2").
 			RowError(1, errors.New("row failed")))
 
-	if _, err := d.DeleteAllDevicesReturningIDs("user@example.com"); err == nil {
+	if _, err := d.DeleteAllDevices("user@example.com"); err == nil {
 		t.Fatal("expected error, got nil")
 	}
 }
