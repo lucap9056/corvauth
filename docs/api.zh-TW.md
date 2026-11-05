@@ -227,12 +227,14 @@ Response：
   - upstream 必須只能經由 proxy 存取
   - proxy 必須清除 client 自帶的同名 header
 
+Header 名稱可自訂（見 [Identity Header](configuration.zh-TW.md#identity-header)），預設為：
+
 | Header | 未設定 | 有設定 |
 |---|---|---|
-| `X-Forwarded-User-Email` | 使用者 email | — |
-| `X-Forwarded-Device-ID` | Device ID | — |
-| `X-Forwarded-Username` | Username，為空時不帶 | — |
-| `X-Forwarded-Identity` | — | Identity token |
+| `X-Corvauth-User-Email` | 使用者 email | — |
+| `X-Corvauth-Device-ID` | Device ID | — |
+| `X-Corvauth-Username` | Username，為空時不帶 | — |
+| `X-Corvauth-Identity` | — | Identity token |
 
 Identity token 以 `HS256` 簽章，header `typ` 為 `identity+jwt`：
 

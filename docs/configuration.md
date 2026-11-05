@@ -54,6 +54,19 @@ Invalid values stop the server on startup
 | `IDENTITY_JWT_SECRET` | — | At least 32 bytes, `/verify` returns a signed identity token instead (see [Identity Token](api.md#identity-token)) |
 | `JWT_DEVICE_TAG_SECRET` | — | At least 32 bytes, secret for generating the token's `device_tag` |
 
+## Identity Headers
+
+Names of the user headers `/verify` returns; only this server may produce them, since requests carrying them are checked against the access token (see [`GET /verify`](api.md#get-verify))
+
+| Variable | Default | Description |
+|---|---|---|
+| `IDENTITY_HEADER` | `X-Corvauth-Identity` | Identity token, when `IDENTITY_JWT_SECRET` is set |
+| `USER_EMAIL_HEADER` | `X-Corvauth-User-Email` | User email |
+| `DEVICE_ID_HEADER` | `X-Corvauth-Device-ID` | Device ID |
+| `USERNAME_HEADER` | `X-Corvauth-Username` | Username |
+
+- Each must be a valid header name, and all four must differ (case-insensitive)
+
 ## Sign-in Policy
 
 | Variable | Default | Description |

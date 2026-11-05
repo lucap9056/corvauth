@@ -227,12 +227,14 @@ Setting `IDENTITY_JWT_SECRET` is recommended
   - upstreams must only be reachable through the proxy
   - the proxy must strip client-supplied copies of these headers
 
+Header names are configurable (see [Identity Headers](configuration.md#identity-headers)); defaults:
+
 | Header | Unset | Set |
 |---|---|---|
-| `X-Forwarded-User-Email` | User email | — |
-| `X-Forwarded-Device-ID` | Device ID | — |
-| `X-Forwarded-Username` | Username, omitted when empty | — |
-| `X-Forwarded-Identity` | — | Identity token |
+| `X-Corvauth-User-Email` | User email | — |
+| `X-Corvauth-Device-ID` | Device ID | — |
+| `X-Corvauth-Username` | Username, omitted when empty | — |
+| `X-Corvauth-Identity` | — | Identity token |
 
 The identity token is signed with `HS256`, header `typ`: `identity+jwt`:
 

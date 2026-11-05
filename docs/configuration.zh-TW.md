@@ -54,6 +54,19 @@
 | `IDENTITY_JWT_SECRET` | — | 至少 32 bytes，`/verify` 改回傳簽章過的 identity token（見 [Identity Token](api.zh-TW.md#identity-token)） |
 | `JWT_DEVICE_TAG_SECRET` | — | 至少 32 bytes，用於生成 token 的 `device_tag` |
 
+## Identity Header
+
+`/verify` 回傳的使用者 header 名稱；請求帶有這些 header 時會與 access token 比對（見 [`GET /verify`](api.zh-TW.md#get-verify)），因此只能由本 server 產生
+
+| 變數 | 預設值 | 說明 |
+|---|---|---|
+| `IDENTITY_HEADER` | `X-Corvauth-Identity` | Identity token，設定 `IDENTITY_JWT_SECRET` 時使用 |
+| `USER_EMAIL_HEADER` | `X-Corvauth-User-Email` | 使用者 email |
+| `DEVICE_ID_HEADER` | `X-Corvauth-Device-ID` | Device ID |
+| `USERNAME_HEADER` | `X-Corvauth-Username` | Username |
+
+- 須為合法的 header 名稱，且四者不可重複（不分大小寫）
+
 ## 登入政策
 
 | 變數 | 預設值 | 說明 |
