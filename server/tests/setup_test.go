@@ -240,6 +240,8 @@ func (m *mockDB) DeleteAllDevices(email string) error {
 	return nil
 }
 
+const testDeviceTagSecret = "test-device-tag-secret-at-least-32-bytes"
+
 // testEnv holds all wired-up dependencies for a single test scenario.
 type testEnv struct {
 	stub       *oauthStub
@@ -294,7 +296,7 @@ func newTestEnvWithIdentity(stub *oauthStub, db *mockDB, oauth2Client login.OAut
 		usersDB = db
 	}
 
-	jwtManager := jwt.NewJWTManager(jwtDB)
+	jwtManager := jwt.NewJWTManager(jwtDB, jwt.WithDeviceTagSecret(testDeviceTagSecret))
 	flightGroup, err := flight.New()
 	if err != nil {
 		panic(err)

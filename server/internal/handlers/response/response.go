@@ -42,6 +42,7 @@ const (
 	AuthErrorHeader           = "X-Auth-Error"
 	AuthErrorDeviceNotFound   = "device_not_found"
 	AuthErrorInvalidSignature = "invalid_signature"
+	AuthErrorInvalidDeviceTag = "invalid_device_tag"
 )
 
 func SetAuthError(w http.ResponseWriter, err error) {
@@ -50,6 +51,8 @@ func SetAuthError(w http.ResponseWriter, err error) {
 		w.Header().Set(AuthErrorHeader, AuthErrorDeviceNotFound)
 	case errors.Is(err, jwt.ErrInvalidSignature):
 		w.Header().Set(AuthErrorHeader, AuthErrorInvalidSignature)
+	case errors.Is(err, jwt.ErrInvalidDeviceTag):
+		w.Header().Set(AuthErrorHeader, AuthErrorInvalidDeviceTag)
 	}
 }
 

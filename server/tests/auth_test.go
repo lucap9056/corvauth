@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	gojwt "github.com/golang-jwt/jwt/v5"
+	"github.com/lucap9056/corvauth/jwt"
 	"github.com/lucap9056/corvauth/server/internal/handlers/options"
 	"github.com/lucap9056/corvauth/server/internal/handlers/response"
 	"github.com/lucap9056/corvauth/server/internal/handlers/session"
@@ -1016,6 +1017,42 @@ func TestAuthErrorHeader(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+func TestAuthErrorHeader_InvalidDeviceTag(t *testing.T) {
+	const email = "tag@example.com"
+	const secret = "test-device-secret"
+
+	stub := newOAuthStub("", "", "")
+	defer stub.Close()
+
+	db := newMockDB()
+	db.seedUser(email)
+	env := newTestEnv(stub, db)
+
+	otherServer := jwt.NewJWTManager(db, jwt.WithDeviceTagSecret("other-device-tag-secret-32-bytes!"))
+	deviceID, _ := db.SaveDeviceSecret(email, "device", secret)
+	_, generation, _ := db.GetDeviceSecret(deviceID)
+	refreshToken, _ := otherServer.GenerateRefresh(email, deviceID, secret, generation)
+	accessToken, _ := otherServer.GenerateAccess(refreshToken, "")
+
+	responses := map[string]*httptest.ResponseRecorder{
+		routeTokens:         refreshAt(env, routeTokens, refreshToken),
+		routeAccessToken:    refreshAt(env, routeAccessToken, refreshToken),
+		routeCurrentSession: refreshAt(env, routeCurrentSession, refreshToken),
+		"GET /verify":       verifyWith(env, accessToken),
+	}
+	for route, w := range responses {
+		if w.Code != http.StatusUnauthorized {
+			t.Errorf("%s: want 401, got %d: %s", route, w.Code, w.Body.String())
+		}
+		if got := w.Header().Get(response.AuthErrorHeader); got != response.AuthErrorInvalidDeviceTag {
+			t.Errorf("%s: %s want %q, got %q", route, response.AuthErrorHeader, response.AuthErrorInvalidDeviceTag, got)
+		}
+	}
+	if _, exists := db.devices[deviceID]; !exists {
+		t.Error("device must not be deleted when the device tag does not match")
 	}
 }
 
