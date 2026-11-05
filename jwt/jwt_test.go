@@ -318,3 +318,61 @@ func TestJWTManager_ExpiredTokenSkipsDeviceLookup(t *testing.T) {
 		t.Fatal("expected expired token to be rejected before the device lookup")
 	}
 }
+
+func TestJWTManager_DeviceTag(t *testing.T) {
+	manager, _ := newTestManager(t, WithDeviceTagSecret("device-tag-secret"))
+	refreshToken := mustGenerateRefresh(t, manager)
+
+	refreshClaims, err := manager.VerifyRefresh(refreshToken)
+	if err != nil {
+		t.Fatalf("failed to verify refresh token: %v", err)
+	}
+	accessClaims, err := manager.VerifyAccess(mustGenerateAccess(t, manager, refreshToken))
+	if err != nil {
+		t.Fatalf("failed to verify access token: %v", err)
+	}
+	if refreshClaims.DeviceTag == "" || accessClaims.DeviceTag == "" {
+		t.Errorf("expected both tokens to carry a device tag, got %q and %q", refreshClaims.DeviceTag, accessClaims.DeviceTag)
+	}
+
+	untagged, _ := newTestManager(t)
+	claims, err := untagged.VerifyRefresh(mustGenerateRefresh(t, untagged))
+	if err != nil || claims.DeviceTag != "" {
+		t.Errorf("expected untagged token without secret, got tag %q, err %v", claims.DeviceTag, err)
+	}
+}
+
+func TestJWTManager_RejectsInvalidDeviceTagBeforeDeviceLookup(t *testing.T) {
+	const unknownDeviceID = "forged-device"
+	manager, _ := newTestManager(t, WithDeviceTagSecret("device-tag-secret"))
+	otherServer, _ := newTestManager(t, WithDeviceTagSecret("other-secret"))
+	expiresAt := jwt.NewNumericDate(time.Now().Add(time.Hour))
+	earlierExpiry := jwt.NewNumericDate(time.Now().Add(time.Minute))
+
+	tests := map[string]struct {
+		tag       string
+		expiresAt *jwt.NumericDate
+	}{
+		"missing":             {"", expiresAt},
+		"from another secret": {otherServer.deviceTag(unknownDeviceID, expiresAt), expiresAt},
+		"for another device":  {manager.deviceTag(testDeviceID, expiresAt), expiresAt},
+		"for another expiry":  {manager.deviceTag(unknownDeviceID, earlierExpiry), expiresAt},
+		"without expiry":      {manager.deviceTag(unknownDeviceID, expiresAt), nil},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			token, err := signToken(RefreshTokenType, RefreshClaims{
+				DeviceID:         unknownDeviceID,
+				DeviceTag:        tt.tag,
+				RegisteredClaims: jwt.RegisteredClaims{ExpiresAt: tt.expiresAt},
+			}, testSecret)
+			if err != nil {
+				t.Fatalf("failed to sign token: %v", err)
+			}
+			if _, err := manager.VerifyRefresh(token); !errors.Is(err, ErrInvalidDeviceTag) {
+				t.Fatalf("expected ErrInvalidDeviceTag, got %v", err)
+			}
+		})
+	}
+}

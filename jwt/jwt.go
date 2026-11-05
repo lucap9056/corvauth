@@ -1,6 +1,10 @@
 package jwt
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"strings"
@@ -16,6 +20,7 @@ var (
 	ErrTokenRevoked            = fmt.Errorf("%w: token generation has been revoked", ErrInvalidToken)
 	ErrDeviceNotFound          = fmt.Errorf("%w: device not found", ErrInvalidToken)
 	ErrInvalidSignature        = fmt.Errorf("%w: signature does not match the device secret", ErrInvalidToken)
+	ErrInvalidDeviceTag        = fmt.Errorf("%w: device tag was not issued by this server", ErrInvalidToken)
 )
 
 const (
@@ -32,12 +37,14 @@ type AccessClaims struct {
 	Username   string `json:"username"`
 	UserEmail  string `json:"user_email"`
 	DeviceID   string `json:"device_id"`
+	DeviceTag  string `json:"device_tag,omitempty"`
 	Generation int    `json:"generation"`
 	jwt.RegisteredClaims
 }
 
 type RefreshClaims struct {
 	DeviceID   string `json:"device_id"`
+	DeviceTag  string `json:"device_tag,omitempty"`
 	Generation int    `json:"generation"`
 	jwt.RegisteredClaims
 }
@@ -65,14 +72,16 @@ func (m *JWTManager) GenerateRefresh(userEmail, deviceID, secret string, gen int
 }
 
 func (m *JWTManager) newRefreshClaims(userEmail, deviceID string, gen int) *RefreshClaims {
+	expiresAt := jwt.NewNumericDate(time.Now().Add(m.config.RefreshTokenDuration))
 	return &RefreshClaims{
 		DeviceID:   deviceID,
+		DeviceTag:  m.deviceTag(deviceID, expiresAt),
 		Generation: gen,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    m.config.Issuer,
 			Audience:  jwt.ClaimStrings{m.config.Audience},
 			Subject:   userEmail,
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(m.config.RefreshTokenDuration)),
+			ExpiresAt: expiresAt,
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
 	}
@@ -84,21 +93,45 @@ func (m *JWTManager) GenerateAccess(refreshToken, username string) (string, erro
 		return "", err
 	}
 
+	expiresAt := jwt.NewNumericDate(time.Now().Add(m.config.AccessTokenDuration))
 	accessClaims := AccessClaims{
 		Username:   username,
 		UserEmail:  claims.Subject,
 		DeviceID:   claims.DeviceID,
+		DeviceTag:  m.deviceTag(claims.DeviceID, expiresAt),
 		Generation: claims.Generation,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    m.config.Issuer,
 			Audience:  jwt.ClaimStrings{m.config.Audience},
 			Subject:   claims.Subject,
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(m.config.AccessTokenDuration)),
+			ExpiresAt: expiresAt,
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
 	}
 
 	return signToken(AccessTokenType, accessClaims, secret)
+}
+
+const deviceTagLength = 16
+
+func (m *JWTManager) deviceTag(deviceID string, expiresAt *jwt.NumericDate) string {
+	if len(m.config.DeviceTagSecret) == 0 {
+		return ""
+	}
+	mac := hmac.New(sha256.New, m.config.DeviceTagSecret)
+	mac.Write([]byte(deviceID))
+	mac.Write(binary.BigEndian.AppendUint64(nil, uint64(expiresAt.Unix())))
+	return base64.RawURLEncoding.EncodeToString(mac.Sum(nil)[:deviceTagLength])
+}
+
+func (m *JWTManager) hasValidDeviceTag(deviceID, tag string, expiresAt *jwt.NumericDate) bool {
+	if len(m.config.DeviceTagSecret) == 0 {
+		return true
+	}
+	if expiresAt == nil {
+		return false
+	}
+	return hmac.Equal([]byte(tag), []byte(m.deviceTag(deviceID, expiresAt)))
 }
 
 func isExpired(expiresAt *jwt.NumericDate) bool {
@@ -161,16 +194,18 @@ func verifyToken[T jwt.Claims](m *JWTManager, tokenStr string, claims T) (T, str
 		return claims, "", ErrInvalidToken
 	}
 
-	var tokenType, deviceID string
+	var tokenType, deviceID, deviceTag string
 	var generation int
 	switch c := any(claims).(type) {
 	case *AccessClaims:
 		tokenType = AccessTokenType
 		deviceID = c.DeviceID
+		deviceTag = c.DeviceTag
 		generation = c.Generation
 	case *RefreshClaims:
 		tokenType = RefreshTokenType
 		deviceID = c.DeviceID
+		deviceTag = c.DeviceTag
 		generation = c.Generation
 	default:
 		return claims, "", ErrInvalidToken
@@ -182,6 +217,9 @@ func verifyToken[T jwt.Claims](m *JWTManager, tokenStr string, claims T) (T, str
 	expiresAt, _ := claims.GetExpirationTime()
 	if isExpired(expiresAt) {
 		return claims, "", ErrInvalidToken
+	}
+	if !m.hasValidDeviceTag(deviceID, deviceTag, expiresAt) {
+		return claims, "", ErrInvalidDeviceTag
 	}
 
 	secret, gen, err := m.db.GetDeviceSecret(deviceID)

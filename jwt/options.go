@@ -9,6 +9,7 @@ type options struct {
 	RefreshTokenDuration time.Duration
 	Issuer               string
 	Audience             string
+	DeviceTagSecret      []byte
 }
 
 type Option func(*options)
@@ -41,5 +42,11 @@ func WithIssuer(issuer string) Option {
 func WithAudience(audience string) Option {
 	return func(o *options) {
 		o.Audience = audience
+	}
+}
+
+func WithDeviceTagSecret(secret string) Option {
+	return func(o *options) {
+		o.DeviceTagSecret = []byte(secret)
 	}
 }
