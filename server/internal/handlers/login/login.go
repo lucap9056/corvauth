@@ -48,6 +48,7 @@ type Handler struct {
 	oauth2Client OAuth2Client
 	flight       *flight.Group
 	options      *options.Options
+	deviceNamer  *deviceNamer
 }
 
 func New(db options.DB, users options.UsersDB, jwtManager *jwt.JWTManager, stateCache state.Cache, oauth2Client OAuth2Client, flightGroup *flight.Group, opts *options.Options) *Handler {
@@ -59,6 +60,7 @@ func New(db options.DB, users options.UsersDB, jwtManager *jwt.JWTManager, state
 		oauth2Client: oauth2Client,
 		flight:       flightGroup,
 		options:      opts,
+		deviceNamer:  newDeviceNamer(),
 	}
 }
 
@@ -186,10 +188,7 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	deviceName := r.Header.Get("X-Device-Name")
-	if deviceName == "" {
-		deviceName = DefaultDeviceName
-	}
+	deviceName := h.deviceNamer.resolve(r)
 
 	headerVerifier := r.Header.Get("X-PKCE-Verifier")
 
