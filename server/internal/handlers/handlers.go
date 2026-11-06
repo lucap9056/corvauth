@@ -51,7 +51,7 @@ func RegisterRoutes(mux *http.ServeMux, deps Dependencies) {
 	if deps.OAuth2Client != nil {
 		loginHandler := login.New(deps.DB, deps.UsersDB, deps.JWTManager, deps.StateCache, deps.OAuth2Client, deps.Flight, opts)
 		mux.HandleFunc("POST /sessions", loginHandler.Login)
-		mux.HandleFunc("GET /callback", loginHandler.Callback)
+		mux.HandleFunc("GET /sessions/callback", loginHandler.Callback)
 		logs.Out.Info("OAuth2 login routes enabled")
 	}
 }

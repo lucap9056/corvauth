@@ -90,7 +90,7 @@ func (s *oauthStub) handleRevoke(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-const testRedirectURL = "http://localhost/callback"
+const testRedirectURL = "http://localhost/sessions/callback"
 
 // mockDB implements options.DB and jwt.Database using in-memory maps.
 type mockDB struct {

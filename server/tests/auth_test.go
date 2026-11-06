@@ -112,7 +112,7 @@ func TestCallback_ExistingUser(t *testing.T) {
 	env := newTestEnv(stub, db)
 
 	stateVal := loginState(t, env)
-	req := httptest.NewRequest(http.MethodGet, "/callback?code=testcode&state="+stateVal, nil)
+	req := httptest.NewRequest(http.MethodGet, "/sessions/callback?code=testcode&state="+stateVal, nil)
 	w := env.do(req)
 
 	if w.Code != http.StatusOK {
@@ -155,7 +155,7 @@ func TestCallback_RegistrationDisabled(t *testing.T) {
 	env := newTestEnv(stub, newMockDB()) // AllowRegistration defaults to false
 
 	stateVal := loginState(t, env)
-	req := httptest.NewRequest(http.MethodGet, "/callback?code=testcode&state="+stateVal, nil)
+	req := httptest.NewRequest(http.MethodGet, "/sessions/callback?code=testcode&state="+stateVal, nil)
 	w := env.do(req)
 
 	if w.Code != http.StatusUnauthorized {
@@ -173,7 +173,7 @@ func TestCallback_RegistrationEnabled(t *testing.T) {
 	env := newTestEnv(stub, db, options.WithAllowRegistration(true))
 
 	stateVal := loginState(t, env)
-	req := httptest.NewRequest(http.MethodGet, "/callback?code=testcode&state="+stateVal, nil)
+	req := httptest.NewRequest(http.MethodGet, "/sessions/callback?code=testcode&state="+stateVal, nil)
 	w := env.do(req)
 
 	if w.Code != http.StatusOK {
@@ -201,7 +201,7 @@ func TestCallback_MissingState(t *testing.T) {
 
 	env := newTestEnv(stub, newMockDB())
 
-	req := httptest.NewRequest(http.MethodGet, "/callback?code=testcode", nil) // no state
+	req := httptest.NewRequest(http.MethodGet, "/sessions/callback?code=testcode", nil) // no state
 	w := env.do(req)
 
 	if w.Code != http.StatusBadRequest {
@@ -215,7 +215,7 @@ func TestCallback_InvalidState(t *testing.T) {
 
 	env := newTestEnv(stub, newMockDB())
 
-	req := httptest.NewRequest(http.MethodGet, "/callback?code=testcode&state=unknown-state", nil)
+	req := httptest.NewRequest(http.MethodGet, "/sessions/callback?code=testcode&state=unknown-state", nil)
 	w := env.do(req)
 
 	if w.Code != http.StatusBadRequest {
@@ -232,14 +232,14 @@ func TestCallback_StateReplay(t *testing.T) {
 	stateVal := loginState(t, env)
 
 	// First use succeeds
-	req := httptest.NewRequest(http.MethodGet, "/callback?code=testcode&state="+stateVal, nil)
+	req := httptest.NewRequest(http.MethodGet, "/sessions/callback?code=testcode&state="+stateVal, nil)
 	w := env.do(req)
 	if w.Code != http.StatusOK {
 		t.Fatalf("first callback: want 200, got %d: %s", w.Code, w.Body.String())
 	}
 
 	// Replay with the same state must fail
-	req2 := httptest.NewRequest(http.MethodGet, "/callback?code=testcode&state="+stateVal, nil)
+	req2 := httptest.NewRequest(http.MethodGet, "/sessions/callback?code=testcode&state="+stateVal, nil)
 	w2 := env.do(req2)
 	if w2.Code != http.StatusBadRequest {
 		t.Fatalf("replay callback: want 400, got %d", w2.Code)
@@ -255,7 +255,7 @@ func TestCallback_NoDB_OAuthTokens(t *testing.T) {
 	env := newTestEnv(stub, nil)
 
 	stateVal := loginState(t, env)
-	req := httptest.NewRequest(http.MethodGet, "/callback?code=testcode&state="+stateVal, nil)
+	req := httptest.NewRequest(http.MethodGet, "/sessions/callback?code=testcode&state="+stateVal, nil)
 	w := env.do(req)
 
 	if w.Code != http.StatusOK {
@@ -291,7 +291,7 @@ func TestCallback_NoDB_PassOAuthToken(t *testing.T) {
 	env := newTestEnv(stub, nil, options.WithPassOAuthToken(true))
 
 	stateVal := loginState(t, env)
-	req := httptest.NewRequest(http.MethodGet, "/callback?code=testcode&state="+stateVal, nil)
+	req := httptest.NewRequest(http.MethodGet, "/sessions/callback?code=testcode&state="+stateVal, nil)
 	w := env.do(req)
 
 	if w.Code != http.StatusOK {
@@ -649,7 +649,7 @@ func TestCallback_ExternalUsers_RegistrationIgnored(t *testing.T) {
 	env := newTestEnv(stub, db, options.WithAllowRegistration(true))
 
 	stateVal := loginState(t, env)
-	req := httptest.NewRequest(http.MethodGet, "/callback?code=testcode&state="+stateVal, nil)
+	req := httptest.NewRequest(http.MethodGet, "/sessions/callback?code=testcode&state="+stateVal, nil)
 	w := env.do(req)
 
 	if w.Code != http.StatusUnauthorized {
@@ -672,7 +672,7 @@ func TestCallback_ExternalUsers_ExistingUser(t *testing.T) {
 	env := newTestEnv(stub, db)
 
 	stateVal := loginState(t, env)
-	req := httptest.NewRequest(http.MethodGet, "/callback?code=testcode&state="+stateVal, nil)
+	req := httptest.NewRequest(http.MethodGet, "/sessions/callback?code=testcode&state="+stateVal, nil)
 	w := env.do(req)
 
 	if w.Code != http.StatusOK {
@@ -725,7 +725,7 @@ func TestCallback_UsernameFromUsersTable(t *testing.T) {
 	env := newTestEnv(stub, db)
 
 	stateVal := loginState(t, env)
-	w := env.do(httptest.NewRequest(http.MethodGet, "/callback?code=testcode&state="+stateVal, nil))
+	w := env.do(httptest.NewRequest(http.MethodGet, "/sessions/callback?code=testcode&state="+stateVal, nil))
 	if w.Code != http.StatusOK {
 		t.Fatalf("want 200, got %d: %s", w.Code, w.Body.String())
 	}
@@ -963,7 +963,7 @@ func TestCallback_UsernameLookupFailureCreatesNoDevice(t *testing.T) {
 	env := newTestEnv(stub, db)
 
 	stateVal := loginState(t, env)
-	w := env.do(httptest.NewRequest(http.MethodGet, "/callback?code=testcode&state="+stateVal, nil))
+	w := env.do(httptest.NewRequest(http.MethodGet, "/sessions/callback?code=testcode&state="+stateVal, nil))
 
 	if w.Code != http.StatusInternalServerError {
 		t.Fatalf("want 500, got %d: %s", w.Code, w.Body.String())
@@ -983,7 +983,7 @@ func TestCallback_RegistrationUsesProviderName(t *testing.T) {
 	env := newTestEnv(stub, db, options.WithAllowRegistration(true))
 
 	stateVal := loginState(t, env)
-	w := env.do(httptest.NewRequest(http.MethodGet, "/callback?code=testcode&state="+stateVal, nil))
+	w := env.do(httptest.NewRequest(http.MethodGet, "/sessions/callback?code=testcode&state="+stateVal, nil))
 	if w.Code != http.StatusOK {
 		t.Fatalf("want 200, got %d: %s", w.Code, w.Body.String())
 	}

@@ -18,7 +18,7 @@ func assertNoStore(t *testing.T, w *httptest.ResponseRecorder) {
 }
 
 func callback(env *testEnv, params url.Values) *httptest.ResponseRecorder {
-	return env.do(httptest.NewRequest(http.MethodGet, "/callback?"+params.Encode(), nil))
+	return env.do(httptest.NewRequest(http.MethodGet, "/sessions/callback?"+params.Encode(), nil))
 }
 
 func TestCallback_ProviderErrorConsumesState(t *testing.T) {

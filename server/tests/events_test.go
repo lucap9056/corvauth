@@ -37,7 +37,7 @@ func TestEvents_InvalidState(t *testing.T) {
 	defer stub.Close()
 	env := newTestEnv(stub, newMockDB())
 
-	env.do(httptest.NewRequest(http.MethodGet, "/callback?code=testcode&state=unknown-state", nil))
+	env.do(httptest.NewRequest(http.MethodGet, "/sessions/callback?code=testcode&state=unknown-state", nil))
 
 	requireEvent(t, recorded, events.InvalidRequest, events.ReasonStateInvalid)
 }

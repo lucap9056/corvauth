@@ -108,14 +108,14 @@ func TestFlow(t *testing.T) {
 		}
 		t.Logf("  callback URL: %s", callbackURL)
 
-		t.Log("  GET /callback")
+		t.Log("  GET /sessions/callback")
 		cbResp, err := client.Get(callbackURL)
 		if err != nil {
-			t.Fatalf("GET /callback: %v", err)
+			t.Fatalf("GET /sessions/callback: %v", err)
 		}
 		defer cbResp.Body.Close()
 		if cbResp.StatusCode != http.StatusOK {
-			t.Fatalf("GET /callback: expected 200, got %d", cbResp.StatusCode)
+			t.Fatalf("GET /sessions/callback: expected 200, got %d", cbResp.StatusCode)
 		}
 
 		var tokenBody struct {
@@ -125,10 +125,10 @@ func TestFlow(t *testing.T) {
 			} `json:"message"`
 		}
 		if err := json.UnmarshalRead(cbResp.Body, &tokenBody); err != nil {
-			t.Fatalf("GET /callback: decode: %v", err)
+			t.Fatalf("GET /sessions/callback: decode: %v", err)
 		}
 		if !tokenBody.Success || tokenBody.Message.AccessToken == "" {
-			t.Fatalf("GET /callback: missing access_token")
+			t.Fatalf("GET /sessions/callback: missing access_token")
 		}
 
 		accessToken = tokenBody.Message.AccessToken

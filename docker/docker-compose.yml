@@ -37,7 +37,7 @@ services:
       OAUTH2_PROVIDER: "github"
       OAUTH2_CLIENT_ID: "your-client-id"
       OAUTH2_CLIENT_SECRET: "your-client-secret"
-      OAUTH2_REDIRECT_URL: "https://auth.example.com/callback"
+      OAUTH2_REDIRECT_URL: "https://auth.example.com/sessions/callback"
       ALLOW_REGISTRATION: "true"
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost/health"]

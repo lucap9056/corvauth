@@ -64,7 +64,7 @@ func TestLogin_RedirectURL(t *testing.T) {
 				t.Fatalf("auth URL redirect_uri = %q; want %q", got, tc.want)
 			}
 
-			w := env.do(httptest.NewRequest(http.MethodGet, "/callback?code=testcode&state="+query.Get("state"), nil))
+			w := env.do(httptest.NewRequest(http.MethodGet, "/sessions/callback?code=testcode&state="+query.Get("state"), nil))
 			if w.Code != http.StatusOK {
 				t.Fatalf("callback: want 200, got %d: %s", w.Code, w.Body.String())
 			}

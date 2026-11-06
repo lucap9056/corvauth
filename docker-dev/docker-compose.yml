@@ -53,7 +53,7 @@ services:
       OIDC_ISSUER_URL: "http://test-provider:5556"
       OAUTH2_CLIENT_ID: "corvauth"
       OAUTH2_CLIENT_SECRET: "corvauth-secret"
-      OAUTH2_REDIRECT_URL: "http://localhost:8080/callback"
+      OAUTH2_REDIRECT_URL: "http://localhost:8080/sessions/callback"
       OAUTH2_SCOPES: "openid,profile,email"
       DB_AUTO_CREATE_SCHEMA: "true"
       HTTP_MODE: "development"
