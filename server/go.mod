@@ -6,7 +6,7 @@ require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/jackc/pgx/v5 v5.8.0
-	github.com/lucap9056/corvauth/database v0.2.0
+	github.com/lucap9056/corvauth/database v0.2.1
 	github.com/lucap9056/corvauth/jwt v0.2.1
 	github.com/lucap9056/corvauth/oauth2 v0.0.0
 	github.com/lucap9056/go-lifecycle/v2 v2.0.0
