@@ -6,10 +6,11 @@ import (
 	"encoding/hex"
 	"encoding/json/v2"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/lucap9056/corvauth/server/internal/cache"
+	"github.com/lucap9056/corvauth/server/internal/events"
+	"github.com/lucap9056/corvauth/server/internal/logs"
 	"github.com/maypok86/otter/v2"
 	"github.com/redis/rueidis"
 	"github.com/redis/rueidis/rueidislock"
@@ -198,7 +199,7 @@ func doDistributed[T any](ctx context.Context, r *redisStore, key string, inFlig
 
 	result, found, err := loadResult[T](ctx, r, hashedKey)
 	if err != nil {
-		log.Printf("[WARN] flight: redis unavailable, running locally: %v", err)
+		logs.Degraded(ctx, events.ReasonFlightRedisUnavailable, "flight result lookup failed, running locally", err)
 		return fn(ctx)
 	}
 	if found && !inFlightOnly {
@@ -210,7 +211,7 @@ func doDistributed[T any](ctx context.Context, r *redisStore, key string, inFlig
 
 	lockCtx, unlock, err := r.lock(ctx, hashedKey)
 	if err != nil {
-		log.Printf("[WARN] flight: distributed lock unavailable, running locally: %v", err)
+		logs.Degraded(ctx, events.ReasonFlightLockUnavailable, "flight distributed lock unavailable, running locally", err)
 		return fn(ctx)
 	}
 	defer unlock()
@@ -246,7 +247,7 @@ func loadResult[T any](ctx context.Context, r *redisStore, hashedKey string) (T,
 	}
 
 	if err := json.Unmarshal(raw, &result); err != nil {
-		log.Printf("[WARN] flight: unmarshal result failed: %v", err)
+		logs.Degraded(ctx, events.ReasonFlightResultCorrupt, "flight result unmarshal failed", err)
 		return result, false, nil
 	}
 	return result, true, nil
@@ -255,11 +256,11 @@ func loadResult[T any](ctx context.Context, r *redisStore, hashedKey string) (T,
 func storeResult[T any](ctx context.Context, r *redisStore, hashedKey string, result T) {
 	raw, err := json.Marshal(result)
 	if err != nil {
-		log.Printf("[WARN] flight: marshal result failed: %v", err)
+		logs.Degraded(ctx, events.ReasonFlightResultCorrupt, "flight result marshal failed", err)
 		return
 	}
 
 	if err := r.store(ctx, hashedKey, raw); err != nil {
-		log.Printf("[WARN] flight: %v", err)
+		logs.Degraded(ctx, events.ReasonFlightRedisUnavailable, "flight result store failed", err)
 	}
 }

@@ -9,10 +9,11 @@ import (
 	"github.com/lucap9056/corvauth/database/schema"
 	"github.com/lucap9056/corvauth/server/internal/handlers/options"
 	"github.com/lucap9056/corvauth/server/internal/identity"
+	"go.uber.org/zap/zapcore"
 )
 
 var allEnvKeys = []string{
-	EnvHTTPAddress, EnvHTTPMode, EnvDatabaseURL, EnvRedisURL,
+	EnvHTTPAddress, EnvHTTPMode, EnvTrustedClientIPHeader, EnvDatabaseURL, EnvRedisURL,
 	EnvDBMaxOpenConns, EnvDBMaxIdleConns, EnvDBConnMaxLifetime, EnvDBConnMaxIdleTime, EnvDBCleanupInterval,
 	EnvDBAutoCreateSchema, EnvDBUserEmailReference, EnvDBUserUsernameColumn,
 	EnvJWTAccessDuration, EnvJWTRefreshDuration, EnvJWTIssuer, EnvJWTAudience, EnvIdentityJWTSecret, EnvJWTDeviceTagSecret,
@@ -69,6 +70,34 @@ func TestLoad_Defaults(t *testing.T) {
 	expectedJWT := JWT{AccessTokenDuration: DefaultJWTAccessDuration, RefreshTokenDuration: DefaultJWTRefreshDuration}
 	if *cfg.JWT != expectedJWT {
 		t.Errorf("JWT: got %+v, want %+v", cfg.JWT, expectedJWT)
+	}
+}
+
+func TestLoadLog(t *testing.T) {
+	cases := []struct {
+		name        string
+		level       string
+		format      string
+		expected    Log
+		expectedErr error
+	}{
+		{name: "defaults", expected: Log{Level: DefaultLogLevel, Format: LogFormatConsole}},
+		{name: "json debug", level: "debug", format: "JSON", expected: Log{Level: zapcore.DebugLevel, Format: LogFormatJSON}},
+		{name: "invalid", level: "verbose", format: "logfmt", expectedErr: ErrInvalidLogLevel},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv(EnvLogLevel, tc.level)
+			t.Setenv(EnvLogFormat, tc.format)
+
+			cfg, err := LoadLog()
+			if !errors.Is(err, tc.expectedErr) {
+				t.Fatalf("got error %v, want %v", err, tc.expectedErr)
+			}
+			if err == nil && *cfg != tc.expected {
+				t.Errorf("got %+v, want %+v", *cfg, tc.expected)
+			}
+		})
 	}
 }
 
@@ -380,6 +409,11 @@ func TestLoad_Validation(t *testing.T) {
 			name:        "duplicate provider token header name",
 			env:         map[string]string{EnvProviderAccessTokenHeader: "x-token", EnvProviderRefreshTokenHeader: "X-Token"},
 			expectedErr: ErrDuplicateHeaderName,
+		},
+		{
+			name:        "invalid trusted client ip header",
+			env:         map[string]string{EnvTrustedClientIPHeader: "X Real IP"},
+			expectedErr: ErrInvalidHeaderName,
 		},
 		{
 			name:        "builtin without urls",

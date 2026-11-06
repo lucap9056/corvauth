@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/lucap9056/corvauth/jwt"
@@ -13,6 +12,7 @@ import (
 	"github.com/lucap9056/corvauth/server/internal/handlers/refresh"
 	"github.com/lucap9056/corvauth/server/internal/handlers/session"
 	"github.com/lucap9056/corvauth/server/internal/identity"
+	"github.com/lucap9056/corvauth/server/internal/logs"
 )
 
 type Dependencies struct {
@@ -52,6 +52,6 @@ func RegisterRoutes(mux *http.ServeMux, deps Dependencies) {
 		loginHandler := login.New(deps.DB, deps.UsersDB, deps.JWTManager, deps.StateCache, deps.OAuth2Client, deps.Flight, opts)
 		mux.HandleFunc("POST /sessions", loginHandler.Login)
 		mux.HandleFunc("GET /callback", loginHandler.Callback)
-		log.Println("OAuth2 is enabled")
+		logs.Out.Info("OAuth2 login routes enabled")
 	}
 }

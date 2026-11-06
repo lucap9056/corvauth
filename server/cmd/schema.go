@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"os"
 
 	"github.com/lucap9056/corvauth/database"
@@ -24,7 +23,7 @@ func runCommand(args []string, stdout io.Writer) error {
 	}
 	switch args[1] {
 	case "apply":
-		return applySchema()
+		return applySchema(stdout)
 	case "print":
 		return printSchema(stdout)
 	}
@@ -40,7 +39,7 @@ func printSchema(w io.Writer) error {
 	return err
 }
 
-func applySchema() error {
+func applySchema(stdout io.Writer) error {
 	cfg, err := config.LoadDatabase()
 	if err != nil {
 		return fmt.Errorf("invalid configuration: %w", err)
@@ -65,6 +64,6 @@ func applySchema() error {
 	}
 	store.Close()
 
-	log.Println("Schema applied")
-	return nil
+	_, err = fmt.Fprintln(stdout, "Schema applied")
+	return err
 }

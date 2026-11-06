@@ -12,6 +12,7 @@ require (
 	github.com/lucap9056/go-lifecycle/v2 v2.0.0
 	github.com/maypok86/otter/v2 v2.3.0
 	github.com/redis/rueidis v1.0.78
+	go.uber.org/zap v1.28.0
 	golang.org/x/oauth2 v0.37.0
 	golang.org/x/sync v0.22.0
 )
@@ -22,11 +23,11 @@ require (
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
-	github.com/kr/text v0.2.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/ravener/discord-oauth2 v0.0.0-20230514095040-ae65713199b3 // indirect
 	github.com/rogpeppe/go-internal v1.16.0 // indirect
 	github.com/stretchr/testify v1.11.1 // indirect
+	go.uber.org/multierr v1.10.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/text v0.41.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

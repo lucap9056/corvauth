@@ -2,12 +2,13 @@ package device
 
 import (
 	"context"
-	"log"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/lucap9056/corvauth/server/internal/cache"
+	"github.com/lucap9056/corvauth/server/internal/events"
+	"github.com/lucap9056/corvauth/server/internal/logs"
 	"github.com/redis/rueidis"
 )
 
@@ -67,7 +68,7 @@ func (r *redisSecretCache) GetSecret(deviceID string) (Secret, bool) {
 	raw, err := r.client.Get(ctx, secretKeyPrefix+deviceID).ToString()
 	if err != nil {
 		if !rueidis.IsRedisNil(err) {
-			log.Printf("[WARN] Failed to get device secret from redis: %v", err)
+			logs.Degraded(ctx, events.ReasonCacheRedisFailed, "device secret lookup in redis failed", err)
 		}
 		return Secret{}, false
 	}
@@ -83,7 +84,7 @@ func (r *redisSecretCache) SetSecret(deviceID string, secret Secret) {
 		[]string{encodeSecret(secret), strconv.Itoa(secret.Generation), strconv.FormatInt(r.ttl.Milliseconds(), 10)},
 	).Error()
 	if err != nil {
-		log.Printf("[WARN] Failed to set device secret in redis: %v", err)
+		logs.Degraded(ctx, events.ReasonCacheRedisFailed, "device secret store in redis failed", err)
 	}
 }
 

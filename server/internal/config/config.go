@@ -15,12 +15,16 @@ import (
 	"github.com/lucap9056/corvauth/oauth2/providers"
 	"github.com/lucap9056/corvauth/server/internal/handlers/options"
 	"github.com/lucap9056/corvauth/server/internal/identity"
+	"go.uber.org/zap/zapcore"
 )
 
 const (
-	EnvHTTPAddress = "HTTP_ADDRESS"
-	EnvHTTPMode    = "HTTP_MODE"
-	EnvRedisURL    = "REDIS_URL"
+	EnvHTTPAddress           = "HTTP_ADDRESS"
+	EnvHTTPMode              = "HTTP_MODE"
+	EnvTrustedClientIPHeader = "TRUSTED_CLIENT_IP_HEADER"
+	EnvRedisURL              = "REDIS_URL"
+	EnvLogLevel              = "LOG_LEVEL"
+	EnvLogFormat             = "LOG_FORMAT"
 
 	EnvDatabaseURL          = "DATABASE_URL"
 	EnvDBMaxOpenConns       = "DB_MAX_OPEN_CONNS"
@@ -67,6 +71,10 @@ const (
 	ModeDevelopment    = "development"
 	ModeProduction     = "production"
 
+	LogFormatConsole = "console"
+	LogFormatJSON    = "json"
+	DefaultLogLevel  = zapcore.InfoLevel
+
 	DefaultDBMaxOpenConns     = 20
 	DefaultDBMaxIdleConns     = 15
 	DefaultDBConnMaxLifetime  = 5 * time.Minute
@@ -90,6 +98,8 @@ var (
 	ErrDeviceTagSecretTooShort    = fmt.Errorf("JWT_DEVICE_TAG_SECRET must be at least %d bytes", MinDeviceTagSecretLength)
 	ErrInvalidHeaderName          = errors.New("invalid header name")
 	ErrDuplicateHeaderName        = errors.New("duplicate header name")
+	ErrInvalidLogLevel            = errors.New("invalid log level")
+	ErrInvalidLogFormat           = errors.New("invalid log format")
 )
 
 var (
@@ -108,12 +118,22 @@ type Config struct {
 }
 
 type HTTP struct {
-	Address string
-	Mode    string
+	Address               string
+	Mode                  string
+	TrustedClientIPHeader string
 }
 
 func (h *HTTP) DevMode() bool {
 	return h.Mode == ModeDevelopment
+}
+
+type Log struct {
+	Level  zapcore.Level
+	Format string
+}
+
+func (l *Log) JSON() bool {
+	return l.Format == LogFormatJSON
 }
 
 type Database struct {
@@ -178,10 +198,7 @@ type Auth struct {
 func Load() (*Config, error) {
 	env := &envReader{}
 	cfg := &Config{
-		HTTP: &HTTP{
-			Address: stringOr(EnvHTTPAddress, DefaultHTTPAddress),
-			Mode:    stringOr(EnvHTTPMode, ModeProduction),
-		},
+		HTTP:     loadHTTP(env),
 		Database: loadDatabase(env),
 		JWT:      loadJWT(env),
 		Redis:    loadRedis(),
@@ -199,6 +216,38 @@ func Load() (*Config, error) {
 		return nil, env.errs
 	}
 	return cfg, nil
+}
+
+func LoadLog() (*Log, error) {
+	env := &envReader{}
+	log := &Log{
+		Level:  DefaultLogLevel,
+		Format: strings.ToLower(stringOr(EnvLogFormat, LogFormatConsole)),
+	}
+	if raw := os.Getenv(EnvLogLevel); raw != "" {
+		if err := log.Level.UnmarshalText([]byte(raw)); err != nil {
+			env.fail(fmt.Errorf("%s: %w: %q", EnvLogLevel, ErrInvalidLogLevel, raw))
+		}
+	}
+	if log.Format != LogFormatConsole && log.Format != LogFormatJSON {
+		env.fail(fmt.Errorf("%s: %w: %q must be %s or %s", EnvLogFormat, ErrInvalidLogFormat, log.Format, LogFormatConsole, LogFormatJSON))
+	}
+	if env.errs != nil {
+		return nil, env.errs
+	}
+	return log, nil
+}
+
+func loadHTTP(env *envReader) *HTTP {
+	http := &HTTP{
+		Address:               stringOr(EnvHTTPAddress, DefaultHTTPAddress),
+		Mode:                  stringOr(EnvHTTPMode, ModeProduction),
+		TrustedClientIPHeader: os.Getenv(EnvTrustedClientIPHeader),
+	}
+	if http.TrustedClientIPHeader != "" {
+		env.headerNames([]string{EnvTrustedClientIPHeader}, []string{http.TrustedClientIPHeader})
+	}
+	return http
 }
 
 func LoadDatabase() (*Database, error) {
