@@ -23,7 +23,7 @@ A lightweight OAuth2 client: the client secret, `state`, and PKCE verifier stay 
 
 - No database needed
 - `DB_*`, `JWT_*`, `ALLOW_REGISTRATION`, and `ALLOW_UNVERIFIED_EMAIL` have no effect
-- Only [Get Health](../resources/health.md#get-health), [Start Login](../resources/session.md#post-sessions), and [Complete Login](../resources/session.md#get-callback) are available
+- Only [Get Health](../resources/health.md#get-health), [Start Login](../resources/session.md#post-sessions), and [Complete Login](../resources/session.md#get-sessions-callback) are available
 
 ::: warning
 Downstream services must validate the provider's tokens themselves

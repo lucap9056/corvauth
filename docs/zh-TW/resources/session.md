@@ -7,7 +7,7 @@
 登入流程見 [OAuth2](../topics/oauth2.md)，token 有效期見 [Token](../topics/tokens.md)。
 
 ::: info
-除了 [開始登入](#post-sessions) 與 [完成登入](#get-callback)，以下 endpoint 只在 session 模式提供
+除了 [開始登入](#post-sessions) 與 [完成登入](#get-sessions-callback)，以下 endpoint 只在 session 模式提供
 :::
 
 ### Device Session 物件 {#device-session-object}
@@ -17,7 +17,7 @@
 | 欄位 | 型別 | 說明 |
 |---|---|---|
 | device_id | string | Device session 的 ID |
-| device_name | string | 送到 [完成登入](#get-callback) 的 `X-Device-Name`，預設 `Unknown Device` |
+| device_name | string | 送到 [完成登入](#get-sessions-callback) 的 `X-Device-Name`，預設 `Unknown Device` |
 | updated_at | integer | 最後一次登入或 refresh 的 Unix 秒數 |
 | current | boolean | 此 request 的 access token 是否屬於這個 session |
 
@@ -64,7 +64,7 @@
 
 發起登入，回傳 [Authorization](#authorization-object) 物件。
 
-Device session 稍後由 [完成登入](#get-callback) 建立。
+Device session 稍後由 [完成登入](#get-sessions-callback) 建立。
 
 ###### JSON Params {#post-sessions-json-params}
 
@@ -72,7 +72,7 @@ Device session 稍後由 [完成登入](#get-callback) 建立。
 |---|---|---|
 | redirect_uri? | string | 必須與 `OAUTH2_REDIRECT_URL` 或 `OAUTH2_ALLOWED_REDIRECT_URLS` 其中一項完全相同，否則 `400`<br>未帶時使用 `OAUTH2_REDIRECT_URL`，未設定則 `400` |
 
-## 完成登入 % GET /callback
+## 完成登入 % GET /sessions/callback
 
 以 authorization code 換取 token。
 
@@ -83,7 +83,7 @@ Device session 稍後由 [完成登入](#get-callback) 建立。
   - `PASS_OAUTH_TOKEN=true` 時改放在 header，`message` 為 `Logged in`
   - 見 [Provider Token](../topics/oauth2.md#provider-tokens)
 
-###### Query String Params {#get-callback-query-string-params}
+###### Query String Params {#get-sessions-callback-query-string-params}
 
 | 欄位 | 型別 | 說明 |
 |---|---|---|
@@ -92,7 +92,7 @@ Device session 稍後由 [完成登入](#get-callback) 建立。
 | iss? | string | Authorization response 的 issuer，provider 有宣告時才檢查 |
 | error? | string | Provider 回傳的錯誤 |
 
-###### Request Header {#get-callback-request-headers}
+###### Request Header {#get-sessions-callback-request-headers}
 
 | Header | 說明 |
 |---|---|

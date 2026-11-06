@@ -49,7 +49,7 @@ Log 輸出到 stdout，格式由 `LOG_FORMAT` 決定、以 `LOG_LEVEL` 過濾（
 | invalid_signature | 簽章與 device secret 不符 |
 | invalid_device_tag | Device tag 不是本 server 簽發 |
 | unexpected_algorithm | Token 使用非預期的簽章演算法 |
-| invalid_issuer | [完成登入](../resources/session.md#get-callback) 的 `iss` 與 provider 不符 |
+| invalid_issuer | [完成登入](../resources/session.md#get-sessions-callback) 的 `iss` 與 provider 不符 |
 | spoofed_identity_header | Request 帶有與 access token 不符的 identity header |
 
 ###### Unauthenticated Reason {#unauthenticated-reasons}
@@ -69,9 +69,9 @@ Log 輸出到 stdout，格式由 `LOG_FORMAT` 決定、以 `LOG_LEVEL` 過濾（
 | body_invalid | [開始登入](../resources/session.md#post-sessions) 的 body 不是合法 JSON |
 | redirect_uri_missing | 沒有 `redirect_uri` 且未設定預設值 |
 | redirect_uri_not_allowed | `redirect_uri` 不在允許清單 |
-| state_missing | [完成登入](../resources/session.md#get-callback) 缺少 `state` |
+| state_missing | [完成登入](../resources/session.md#get-sessions-callback) 缺少 `state` |
 | state_invalid | `state` 不存在、已過期或已使用 |
-| code_missing | [完成登入](../resources/session.md#get-callback) 缺少 `code` |
+| code_missing | [完成登入](../resources/session.md#get-sessions-callback) 缺少 `code` |
 | pkce_invalid | `X-PKCE-Verifier` 不符 |
 
 ###### Denied Reason {#denied-reasons}

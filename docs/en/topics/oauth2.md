@@ -9,7 +9,7 @@ Corvauth signs users in through an OAuth2 or OIDC provider and turns the result 
    - Omitted: `OAUTH2_REDIRECT_URL`
    - The server generates a PKCE verifier and stores it with the redirect URL under a one-time `state`
    - The `state` lives in Redis if `REDIS_URL` is set, otherwise in memory
-2. The provider redirects to the redirect URL, whose page passes `code` and `state` to [Complete Login](../resources/session.md#get-callback)
+2. The provider redirects to the redirect URL, whose page passes `code` and `state` to [Complete Login](../resources/session.md#get-sessions-callback)
    - The server takes the verifier and redirect URL by `state`, then deletes it to prevent replay
    - The server exchanges the code
 3. In session modes, the server reads the email, creates a device session, sets the `refresh_token` cookie, and returns a [token pair](../resources/session.md#token-pair-object)
@@ -25,7 +25,7 @@ By default the email must be verified by the provider (`email_verified`)
 `OAUTH2_CLIENT_PKCE=true` is for clients that drive PKCE themselves:
 
 1. [Start Login](../resources/session.md#post-sessions) also returns `verifier`
-2. The client sends it back to [Complete Login](../resources/session.md#get-callback) in `X-PKCE-Verifier`
+2. The client sends it back to [Complete Login](../resources/session.md#get-sessions-callback) in `X-PKCE-Verifier`
 3. A missing or mismatched verifier returns `400`
 
 ## Providers
@@ -56,7 +56,7 @@ All variables are listed in [OAuth2 Variables](./configuration.md#oauth2).
 
 | Mode | `PASS_OAUTH_TOKEN=false` (default) | `PASS_OAUTH_TOKEN=true` |
 |---|---|---|
-| Session modes | Revoked and discarded right after login | Returned in headers of [Complete Login](../resources/session.md#get-callback)<br>The client keeps them |
+| Session modes | Revoked and discarded right after login | Returned in headers of [Complete Login](../resources/session.md#get-sessions-callback)<br>The client keeps them |
 | Stateless proxy | Returned in the response body | Returned only in headers<br>`message` is `Logged in` |
 
 ###### Provider Token Headers

@@ -16,7 +16,7 @@ Variables marked `?` are optional.
 |---|---|---|---|
 | HTTP_ADDRESS? | string | `:80` | Listen address<br>`unix:///path/to.sock` listens on a Unix socket |
 | HTTP_MODE? | string | `production` | `development` drops `Secure` from the `refresh_token` cookie, for local HTTP testing |
-| REDIS_URL? | string | — | Stores `state`, caches device secrets, and dedupes [Complete Login](../resources/session.md#get-callback) and refresh token rotation across instances<br>Unset: in-memory, single instance only |
+| REDIS_URL? | string | — | Stores `state`, caches device secrets, and dedupes [Complete Login](../resources/session.md#get-sessions-callback) and refresh token rotation across instances<br>Unset: in-memory, single instance only |
 | TRUSTED_CLIENT_IP_HEADER? | string | — | Client IP header set by the trusted proxy, e.g. `X-Real-IP`<br>Unset: remote address<br>See [Client IP](./logging.md#client-ip) |
 
 ## Logging

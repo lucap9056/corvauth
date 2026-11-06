@@ -7,7 +7,7 @@
 | 200 (OK) | Request 成功 |
 | 204 (No Content) | Access token 有效，只回傳使用者 header<br>見 [Verify](../resources/verify.md) |
 | 400 (Bad Request) | Request 格式錯誤，或 provider 拒絕授權請求 |
-| 401 (Unauthorized) | Token 缺少、無效或過期<br>在 [完成登入](../resources/session.md#get-callback) 表示該使用者不允許登入 |
+| 401 (Unauthorized) | Token 缺少、無效或過期<br>在 [完成登入](../resources/session.md#get-sessions-callback) 表示該使用者不允許登入 |
 | 403 (Forbidden) | Request 帶的 identity header 與 access token 不符，或使用者在 provider 拒絕授權 |
 | 500 (Internal Server Error) | 內部錯誤，或向 provider 進行 code exchange、取得 user info 失敗 |
 | 502 (Bad Gateway) | Provider 回傳 `server_error` |
@@ -37,7 +37,7 @@
 
 ###### Issuer 錯誤 {#issuer-errors}
 
-由 [完成登入](../resources/session.md#get-callback) 加在 `400` 上
+由 [完成登入](../resources/session.md#get-sessions-callback) 加在 `400` 上
 
 | 值 | 原因 |
 |---|---|

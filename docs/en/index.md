@@ -24,10 +24,10 @@ Corvauth is a device-bound session authentication server that sits next to your 
 ## How It Works
 
 ```
-               ┌──────────────────────── server ────────────────────────┐
- browser ───▶   POST /sessions, /callback ──▶ OAuth2.0 / OIDC provider
+               ┌──────────────────────────── server ─────────────────────────────┐
+ browser ───▶   POST /sessions, /sessions/callback ──▶ OAuth2.0 / OIDC provider
  proxy   ───▶   /verify, /sessions ──▶ jwt ──▶ database ──▶ PostgreSQL
-               └────────────────────────────────────────────────────────┘
+               └─────────────────────────────────────────────────────────────────┘
 ```
 
 - Every login creates a [device session](./resources/session.md#device-session-object) with its own signing secret

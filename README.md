@@ -13,10 +13,10 @@ If you already run a reverse proxy, let this project handle authentication:
 - **Reuse your users table**: linked by email, no data migration
 
 ```
-               ┌──────────────────────── server ────────────────────────┐
- browser ───▶   POST /sessions, /callback ──▶ OAuth2.0 / OIDC provider
+               ┌──────────────────────────── server ─────────────────────────────┐
+ browser ───▶   POST /sessions, /sessions/callback ──▶ OAuth2.0 / OIDC provider
  proxy   ───▶   /verify, /sessions ──▶ jwt ──▶ database ──▶ PostgreSQL
-               └────────────────────────────────────────────────────────┘
+               └─────────────────────────────────────────────────────────────────┘
 ```
 
 - Every login creates a **device session** with its own signing secret

@@ -20,7 +20,7 @@ Corvauth 的路徑沒有版本前綴。
 
 | 模式 | 可用的 Endpoint |
 |---|---|
-| Stateless proxy | [取得健康狀態](./resources/health.md#get-health)、[開始登入](./resources/session.md#post-sessions)、[完成登入](./resources/session.md#get-callback) |
+| Stateless proxy | [取得健康狀態](./resources/health.md#get-health)、[開始登入](./resources/session.md#post-sessions)、[完成登入](./resources/session.md#get-sessions-callback) |
 | Managed users | 全部 |
 | External users | [刪除目前使用者](./resources/user.md#delete-users-me) 以外的全部 |
 

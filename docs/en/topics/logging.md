@@ -49,7 +49,7 @@ Each failed request logs one entry.
 | invalid_signature | The signature does not match the device secret |
 | invalid_device_tag | The device tag was not issued by this server |
 | unexpected_algorithm | The token is signed with an unexpected algorithm |
-| invalid_issuer | `iss` on [Complete Login](../resources/session.md#get-callback) does not match the provider |
+| invalid_issuer | `iss` on [Complete Login](../resources/session.md#get-sessions-callback) does not match the provider |
 | spoofed_identity_header | The request carries identity headers that do not match the access token |
 
 ###### Unauthenticated Reasons
@@ -69,9 +69,9 @@ Each failed request logs one entry.
 | body_invalid | The [Start Login](../resources/session.md#post-sessions) body is not valid JSON |
 | redirect_uri_missing | No `redirect_uri` and no default configured |
 | redirect_uri_not_allowed | `redirect_uri` is not in the allowed list |
-| state_missing | [Complete Login](../resources/session.md#get-callback) without `state` |
+| state_missing | [Complete Login](../resources/session.md#get-sessions-callback) without `state` |
 | state_invalid | `state` is unknown, expired, or already used |
-| code_missing | [Complete Login](../resources/session.md#get-callback) without `code` |
+| code_missing | [Complete Login](../resources/session.md#get-sessions-callback) without `code` |
 | pkce_invalid | `X-PKCE-Verifier` does not match |
 
 ###### Denied Reasons

@@ -22,7 +22,7 @@ Not every endpoint exists in every [deployment mode](./topics/deployment-modes.m
 
 | Mode | Available Endpoints |
 |---|---|
-| Stateless proxy | [Get Health](./resources/health.md#get-health), [Start Login](./resources/session.md#post-sessions), [Complete Login](./resources/session.md#get-callback) |
+| Stateless proxy | [Get Health](./resources/health.md#get-health), [Start Login](./resources/session.md#post-sessions), [Complete Login](./resources/session.md#get-sessions-callback) |
 | Managed users | All endpoints |
 | External users | All endpoints except [Delete Current User](./resources/user.md#delete-users-me) |
 

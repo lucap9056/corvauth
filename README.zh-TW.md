@@ -13,10 +13,10 @@ Device-bound session 認證 server
 - **可沿用既有 users table**：以 email 關聯，不需搬資料
 
 ```
-               ┌──────────────────────── server ────────────────────────┐
- browser ───▶   POST /sessions, /callback ──▶ OAuth2.0 / OIDC provider
+               ┌──────────────────────────── server ─────────────────────────────┐
+ browser ───▶   POST /sessions, /sessions/callback ──▶ OAuth2.0 / OIDC provider
  proxy   ───▶   /verify, /sessions ──▶ jwt ──▶ database ──▶ PostgreSQL
-               └────────────────────────────────────────────────────────┘
+               └─────────────────────────────────────────────────────────────────┘
 ```
 
 - 每次登入建立一個 **device session**，有自己的 signing secret

@@ -14,7 +14,7 @@ Corvauth 完全以環境變數設定，值無效時 server 會在啟動時停止
 |---|---|---|---|
 | HTTP_ADDRESS? | string | `:80` | 監聽位址<br>`unix:///path/to.sock` 改監聽 Unix socket |
 | HTTP_MODE? | string | `production` | `development` 會移除 `refresh_token` cookie 的 `Secure`，供本機 HTTP 測試 |
-| REDIS_URL? | string | — | 存放 `state`、快取 device secret，並跨實例去重 [完成登入](../resources/session.md#get-callback) 與 refresh token rotation<br>未設定時存在記憶體，僅限單一實例 |
+| REDIS_URL? | string | — | 存放 `state`、快取 device secret，並跨實例去重 [完成登入](../resources/session.md#get-sessions-callback) 與 refresh token rotation<br>未設定時存在記憶體，僅限單一實例 |
 | TRUSTED_CLIENT_IP_HEADER? | string | — | 受信任 proxy 設定的 client IP header，例如 `X-Real-IP`<br>未設定時使用 remote address<br>見 [Client IP](./logging.md#client-ip) |
 
 ## Logging {#logging}

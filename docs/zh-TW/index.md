@@ -24,10 +24,10 @@ Corvauth 是 device-bound session 認證 server，搭配既有的 reverse proxy 
 ## 運作方式 {#how-it-works}
 
 ```
-               ┌──────────────────────── server ────────────────────────┐
- browser ───▶   POST /sessions, /callback ──▶ OAuth2.0 / OIDC provider
+               ┌──────────────────────────── server ─────────────────────────────┐
+ browser ───▶   POST /sessions, /sessions/callback ──▶ OAuth2.0 / OIDC provider
  proxy   ───▶   /verify, /sessions ──▶ jwt ──▶ database ──▶ PostgreSQL
-               └────────────────────────────────────────────────────────┘
+               └─────────────────────────────────────────────────────────────────┘
 ```
 
 - 每次登入建立一個 [device session](./resources/session.md#device-session-object)，有自己的 signing secret

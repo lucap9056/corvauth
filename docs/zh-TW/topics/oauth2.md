@@ -9,7 +9,7 @@ Corvauth 透過 OAuth2 或 OIDC provider 讓使用者登入，並將結果轉成
    - 未帶時使用 `OAUTH2_REDIRECT_URL`
    - Server 產生 PKCE verifier，與 redirect URL 一起存在一次性的 `state` 底下
    - 有設 `REDIS_URL` 時 `state` 存在 Redis，否則存在記憶體
-2. Provider 導回 redirect URL，該頁面將 `code` 與 `state` 交給 [完成登入](../resources/session.md#get-callback)
+2. Provider 導回 redirect URL，該頁面將 `code` 與 `state` 交給 [完成登入](../resources/session.md#get-sessions-callback)
    - Server 以 `state` 取出 verifier 與 redirect URL 後立即刪除，防止 replay
    - Server 進行 code exchange
 3. Session 模式下，server 讀取 email、建立 device session、設定 `refresh_token` cookie，並回傳 [Token Pair](../resources/session.md#token-pair-object)
@@ -25,7 +25,7 @@ Corvauth 透過 OAuth2 或 OIDC provider 讓使用者登入，並將結果轉成
 `OAUTH2_CLIENT_PKCE=true` 供自行處理 PKCE 的 client 使用：
 
 1. [開始登入](../resources/session.md#post-sessions) 額外回傳 `verifier`
-2. Client 以 `X-PKCE-Verifier` 將它送回 [完成登入](../resources/session.md#get-callback)
+2. Client 以 `X-PKCE-Verifier` 將它送回 [完成登入](../resources/session.md#get-sessions-callback)
 3. Verifier 缺少或不符時回 `400`
 
 ## Provider {#providers}
@@ -54,7 +54,7 @@ Corvauth 透過 OAuth2 或 OIDC provider 讓使用者登入，並將結果轉成
 
 | 模式 | `PASS_OAUTH_TOKEN=false`（預設） | `PASS_OAUTH_TOKEN=true` |
 |---|---|---|
-| Session 模式 | 登入後立即撤銷並丟棄 | 放在 [完成登入](../resources/session.md#get-callback) 的 header 回傳，由 client 保存 |
+| Session 模式 | 登入後立即撤銷並丟棄 | 放在 [完成登入](../resources/session.md#get-sessions-callback) 的 header 回傳，由 client 保存 |
 | Stateless proxy | 放在 response body 回傳 | 只放在 header 回傳，`message` 為 `Logged in` |
 
 ###### Provider Token Header {#provider-token-headers}

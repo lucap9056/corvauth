@@ -23,7 +23,7 @@ Managed users 與 external users 合稱 **session 模式**。
 
 - 不需要 database
 - `DB_*`、`JWT_*`、`ALLOW_REGISTRATION`、`ALLOW_UNVERIFIED_EMAIL` 無作用
-- 只提供 [取得健康狀態](../resources/health.md#get-health)、[開始登入](../resources/session.md#post-sessions)、[完成登入](../resources/session.md#get-callback)
+- 只提供 [取得健康狀態](../resources/health.md#get-health)、[開始登入](../resources/session.md#post-sessions)、[完成登入](../resources/session.md#get-sessions-callback)
 
 ::: warning
 下游服務需自行驗證 provider 的 token

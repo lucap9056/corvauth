@@ -7,7 +7,7 @@ Logging out or deleting a device only affects that device's tokens.
 See [OAuth2](../topics/oauth2.md) for the login flow and [Tokens](../topics/tokens.md) for token lifetimes.
 
 ::: info
-Except [Start Login](#post-sessions) and [Complete Login](#get-callback), these endpoints are available in session modes only
+Except [Start Login](#post-sessions) and [Complete Login](#get-sessions-callback), these endpoints are available in session modes only
 :::
 
 ### Device Session Object
@@ -17,7 +17,7 @@ Except [Start Login](#post-sessions) and [Complete Login](#get-callback), these 
 | Field | Type | Description |
 |---|---|---|
 | device_id | string | ID of the device session |
-| device_name | string | `X-Device-Name` sent to [Complete Login](#get-callback), `Unknown Device` by default |
+| device_name | string | `X-Device-Name` sent to [Complete Login](#get-sessions-callback), `Unknown Device` by default |
 | updated_at | integer | Unix seconds of the last login or refresh |
 | current | boolean | Whether the access token of the request belongs to this session |
 
@@ -66,7 +66,7 @@ Starts a login.
 
 Returns an [authorization](#authorization-object) object.
 
-The device session is created later by [Complete Login](#get-callback).
+The device session is created later by [Complete Login](#get-sessions-callback).
 
 ###### JSON Params
 
@@ -74,7 +74,7 @@ The device session is created later by [Complete Login](#get-callback).
 |---|---|---|
 | redirect_uri? | string | Must exactly match `OAUTH2_REDIRECT_URL` or an entry in `OAUTH2_ALLOWED_REDIRECT_URLS`, otherwise `400`<br>Omitted: `OAUTH2_REDIRECT_URL`, or `400` when unset |
 
-## Complete Login % GET /callback
+## Complete Login % GET /sessions/callback
 
 Exchanges the authorization code for tokens.
 

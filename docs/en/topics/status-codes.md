@@ -7,7 +7,7 @@
 | 200 (OK) | The request succeeded |
 | 204 (No Content) | The access token is valid<br>User headers only<br>See [Verify](../resources/verify.md) |
 | 400 (Bad Request) | The request is malformed, or the provider rejected the authorization request |
-| 401 (Unauthorized) | The token is missing, invalid, or expired<br>On [Complete Login](../resources/session.md#get-callback), the user is not allowed to sign in |
+| 401 (Unauthorized) | The token is missing, invalid, or expired<br>On [Complete Login](../resources/session.md#get-sessions-callback), the user is not allowed to sign in |
 | 403 (Forbidden) | Identity headers in the request do not match the access token, or the user declined consent at the provider |
 | 500 (Internal Server Error) | An internal failure, or the code exchange or user info request to the provider failed |
 | 502 (Bad Gateway) | The provider returned `server_error` |
@@ -37,7 +37,7 @@ Added to `401` by [Rotate Refresh Token](../resources/session.md#post-sessions-c
 
 ###### Issuer Errors
 
-Added to `400` by [Complete Login](../resources/session.md#get-callback)
+Added to `400` by [Complete Login](../resources/session.md#get-sessions-callback)
 
 | Value | Cause |
 |---|---|
