@@ -1,0 +1,551 @@
+openapi: 3.1.0
+info:
+  title: Corvauth
+  version: 0.4.0
+  description: Device-bound session authentication server
+  license:
+    name: MIT
+    url: https://github.com/lucap9056/corvauth/blob/main/LICENSE
+
+tags:
+  - name: health
+  - name: login
+  - name: current-session
+  - name: verify
+  - name: device-sessions
+  - name: account
+
+paths:
+  /health:
+    get:
+      tags: [health]
+      x-modes: [stateless, managed, external]
+      summary: Health check
+      responses:
+        "200":
+          description: Server is running
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: OK
+
+  /sessions:
+    post:
+      tags: [login]
+      x-modes: [stateless, managed, external]
+      summary: Start a login
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+            example:
+              redirect_uri: https://app.example.com/callback
+      responses:
+        "200":
+          description: Authorization URL to redirect the user to
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+              example:
+                success: true
+                message:
+                  url: https://provider.example.com/authorize?...
+                  verifier: "..."
+        "400":
+          $ref: "#/components/responses/BadRequest"
+    get:
+      tags: [device-sessions]
+      x-modes: [managed, external]
+      summary: List the user's device sessions
+      security:
+        - accessToken: []
+      responses:
+        "200":
+          description: Device sessions, most recently refreshed first
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionList"
+              example:
+                success: true
+                message:
+                  - device_id: 3f1c2a9e-...
+                    device_name: Unknown Device
+                    updated_at: 1767225600
+                    current: true
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    delete:
+      tags: [device-sessions]
+      x-modes: [managed, external]
+      summary: Revoke all of the user's device sessions
+      security:
+        - accessToken: []
+      responses:
+        "200":
+          description: All device sessions revoked
+          headers:
+            Set-Cookie:
+              $ref: "#/components/headers/ClearRefreshTokenCookie"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+              example:
+                success: true
+                message: Logged out from all sessions
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /callback:
+    get:
+      tags: [login]
+      x-modes: [stateless, managed, external]
+      summary: Complete a login
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+          example: "..."
+        - name: state
+          in: query
+          required: true
+          schema:
+            type: string
+          example: "..."
+        - name: iss
+          in: query
+          description: Authorization response issuer, checked when the provider declares it
+          schema:
+            type: string
+        - name: error
+          in: query
+          description: Error returned by the provider
+          schema:
+            type: string
+        - name: X-Device-Name
+          in: header
+          schema:
+            type: string
+            default: Unknown Device
+          example: My Laptop
+        - name: X-PKCE-Verifier
+          in: header
+          description: Required when OAUTH2_CLIENT_PKCE=true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Logged in
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+            Set-Cookie:
+              description: Session modes only
+              schema:
+                type: string
+              example: refresh_token=...; Path=/; Expires=...; HttpOnly; Secure; SameSite=Lax
+            X-Corvauth-Provider-Access-Token:
+              description: With PASS_OAUTH_TOKEN=true; name set by PROVIDER_ACCESS_TOKEN_HEADER
+              schema:
+                type: string
+            X-Corvauth-Provider-Refresh-Token:
+              description: With PASS_OAUTH_TOKEN=true; name set by PROVIDER_REFRESH_TOKEN_HEADER
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/TokenPairResponse"
+                  - $ref: "#/components/schemas/MessageResponse"
+              examples:
+                sessionModes:
+                  summary: Session modes
+                  value:
+                    success: true
+                    message:
+                      access_token: "..."
+                      refresh_token: "..."
+                statelessProxy:
+                  summary: Stateless proxy
+                  x-headers:
+                    Set-Cookie: null
+                  value:
+                    success: true
+                    message:
+                      access_token: "..."
+                      refresh_token: "..."
+                passOAuthToken:
+                  summary: Stateless proxy, PASS_OAUTH_TOKEN=true
+                  x-headers:
+                    Set-Cookie: null
+                    X-Corvauth-Provider-Access-Token: "..."
+                    X-Corvauth-Provider-Refresh-Token: "..."
+                  value:
+                    success: true
+                    message: Logged in
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /sessions/current/tokens:
+    post:
+      tags: [current-session]
+      x-modes: [managed, external]
+      summary: Rotate the refresh token
+      security:
+        - refreshTokenCookie: []
+      requestBody:
+        $ref: "#/components/requestBodies/RefreshToken"
+      responses:
+        "200":
+          description: New token pair
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+            Set-Cookie:
+              $ref: "#/components/headers/RefreshTokenCookie"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenPairResponse"
+              example:
+                success: true
+                message:
+                  access_token: "..."
+                  refresh_token: "..."
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /sessions/current/access-token:
+    post:
+      tags: [current-session]
+      x-modes: [managed, external]
+      summary: Issue a new access token
+      security:
+        - refreshTokenCookie: []
+      requestBody:
+        $ref: "#/components/requestBodies/RefreshToken"
+      responses:
+        "200":
+          description: New access token
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+              example:
+                success: true
+                message: "..."
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /sessions/current:
+    get:
+      tags: [current-session]
+      x-modes: [managed, external]
+      summary: Read the current refresh token's status
+      security:
+        - refreshTokenCookie: []
+        - refreshTokenBearer: []
+      responses:
+        "200":
+          description: Refresh token status, without rotation
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionStatus"
+              example:
+                success: true
+                message:
+                  device_id: 3f1c2a9e-...
+                  issued_at: 1767225600
+                  expires_at: 1769817600
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    delete:
+      tags: [current-session]
+      x-modes: [managed, external]
+      summary: Log out of the current device session
+      security:
+        - refreshTokenCookie: []
+        - {}
+      requestBody:
+        $ref: "#/components/requestBodies/RefreshToken"
+      responses:
+        "200":
+          description: Device session revoked
+          headers:
+            Set-Cookie:
+              $ref: "#/components/headers/ClearRefreshTokenCookie"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+              example:
+                success: true
+                message: Logged out and device session revoked
+
+  /verify:
+    get:
+      tags: [verify]
+      x-modes: [managed, external]
+      summary: Verify an access token
+      security:
+        - accessToken: []
+      responses:
+        "204":
+          $ref: "#/components/responses/UserHeaders"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /verify-optional:
+    get:
+      tags: [verify]
+      x-modes: [managed, external]
+      summary: Verify an access token when present
+      security:
+        - accessToken: []
+        - {}
+      responses:
+        "204":
+          $ref: "#/components/responses/UserHeaders"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /users/me:
+    delete:
+      tags: [account]
+      x-modes: [managed]
+      summary: Delete the user and all sessions
+      description: Managed users mode only
+      security:
+        - accessToken: []
+      responses:
+        "200":
+          description: Account deleted
+          headers:
+            Set-Cookie:
+              $ref: "#/components/headers/ClearRefreshTokenCookie"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+              example:
+                success: true
+                message: Account deleted
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+components:
+  securitySchemes:
+    accessToken:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    refreshTokenCookie:
+      type: apiKey
+      in: cookie
+      name: refresh_token
+    refreshTokenBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  requestBodies:
+    RefreshToken:
+      description: Read only when the refresh_token cookie is absent
+      required: false
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              refresh_token:
+                type: string
+          example:
+            refresh_token: "..."
+
+  headers:
+    NoStore:
+      schema:
+        type: string
+      example: no-store
+    RefreshTokenCookie:
+      schema:
+        type: string
+      example: refresh_token=...; Path=/; Expires=...; HttpOnly; Secure; SameSite=Lax
+    ClearRefreshTokenCookie:
+      schema:
+        type: string
+      example: refresh_token=; Path=/; Max-Age=0; HttpOnly
+    AuthError:
+      description: Present only for the causes listed in Error Headers
+      schema:
+        type: string
+        enum:
+          - device_not_found
+          - invalid_signature
+          - invalid_device_tag
+          - unexpected_algorithm
+          - invalid_issuer
+          - spoofed_identity_header
+
+  responses:
+    UserHeaders:
+      description: Valid access token; user headers, names configurable
+      headers:
+        X-Corvauth-User-Email:
+          description: Without IDENTITY_JWT_SECRET
+          schema:
+            type: string
+          example: user@example.com
+        X-Corvauth-Device-ID:
+          description: Without IDENTITY_JWT_SECRET
+          schema:
+            type: string
+          example: 3f1c2a9e-...
+        X-Corvauth-Username:
+          description: Without IDENTITY_JWT_SECRET, omitted when empty
+          schema:
+            type: string
+          example: User
+        X-Corvauth-Identity:
+          description: With IDENTITY_JWT_SECRET, replaces the headers above
+          schema:
+            type: string
+    BadRequest:
+      description: Invalid request
+      headers:
+        X-Auth-Error:
+          $ref: "#/components/headers/AuthError"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Unauthorized:
+      description: Missing, invalid or expired token
+      headers:
+        WWW-Authenticate:
+          schema:
+            type: string
+          example: Bearer error="invalid_token"
+        X-Auth-Error:
+          $ref: "#/components/headers/AuthError"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Forbidden:
+      description: User headers in the request do not match the access token
+      headers:
+        X-Auth-Error:
+          $ref: "#/components/headers/AuthError"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+  schemas:
+    LoginRequest:
+      type: object
+      properties:
+        redirect_uri:
+          type: string
+          format: uri
+    LoginResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: object
+          properties:
+            url:
+              type: string
+              format: uri
+            verifier:
+              type: string
+              description: Present only when OAUTH2_CLIENT_PKCE=true
+    TokenPairResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: object
+          properties:
+            access_token:
+              type: string
+            refresh_token:
+              type: string
+    SessionStatus:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: object
+          properties:
+            device_id:
+              type: string
+            issued_at:
+              type: integer
+            expires_at:
+              type: integer
+    SessionList:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: array
+          items:
+            type: object
+            properties:
+              device_id:
+                type: string
+              device_name:
+                type: string
+              updated_at:
+                type: integer
+              current:
+                type: boolean
+    MessageResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: false
+        message:
+          type: string
