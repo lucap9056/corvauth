@@ -1,0 +1,114 @@
+.method-badge {
+  display: inline-block;
+  box-sizing: border-box;
+  border-radius: 4px;
+  font-family: var(--vp-font-family-mono);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.5;
+  text-align: center;
+  background: linear-gradient(var(--method-badge-tint), var(--method-badge-tint)), var(--method-badge-base);
+}
+
+.method-get {
+  color: var(--vp-c-green-1);
+  --method-badge-tint: var(--vp-c-green-soft);
+}
+
+.method-post {
+  color: var(--vp-c-indigo-1);
+  --method-badge-tint: var(--vp-c-indigo-soft);
+}
+
+.method-put,
+.method-patch {
+  color: var(--vp-c-yellow-1);
+  --method-badge-tint: var(--vp-c-yellow-soft);
+}
+
+.method-delete {
+  color: var(--vp-c-red-1);
+  --method-badge-tint: var(--vp-c-red-soft);
+}
+
+.vp-doc .endpoint {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0;
+  padding: 10px 16px;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 8px;
+  background: var(--vp-c-bg-soft);
+}
+
+.vp-doc .endpoint .method-badge {
+  --method-badge-base: var(--vp-c-bg-soft);
+  padding: 0.15em 0.6em;
+  font-size: 12px;
+}
+
+.vp-doc .endpoint code {
+  padding: 0;
+  background: none;
+  color: var(--vp-c-text-1);
+  font-size: 14px;
+}
+
+.vp-doc h6 {
+  margin: 32px 0 8px;
+  color: var(--vp-c-text-2);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.vp-doc h6 + table,
+.vp-doc h6 + div[class*="language-"] {
+  margin-top: 8px;
+}
+
+.mode-select {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 0 8px;
+  border-bottom: 1px solid var(--vp-c-divider);
+}
+
+.mode-select-label {
+  color: var(--vp-c-text-2);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.mode-select select {
+  padding: 4px 8px;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 6px;
+  background: var(--vp-c-bg-alt);
+  color: var(--vp-c-text-1);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.mode-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.mode-notice p {
+  margin: 0;
+}
+
+.mode-notice button {
+  flex-shrink: 0;
+  padding: 2px 10px;
+  border: 1px solid currentColor;
+  border-radius: 6px;
+  font-size: 13px;
+}
