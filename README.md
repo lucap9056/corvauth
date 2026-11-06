@@ -32,7 +32,7 @@ Copy [`docker/docker-compose.yml`](docker/docker-compose.yml), replace the `chan
 docker compose up -d
 ```
 
-It uses the image `ghcr.io/lucap9056/corvauth` in **managed users** mode with registration on, signing in through GitHub (see [Configuration](docs/configuration.md) for other providers)
+It uses the image `ghcr.io/lucap9056/corvauth` in **managed users** mode with registration on, signing in through GitHub (see [Configuration](docs/en/topics/configuration.md#oauth2) for other providers)
 
 ### Development
 
@@ -61,11 +61,13 @@ Selected by `DATABASE_URL` and `DB_USER_EMAIL_REFERENCE`:
 
 ## Documentation
 
-- [Deployment Modes](docs/deployment-modes.md): users table setup per mode
-- [Sessions](docs/sessions.md): login flow, tokens, rotation, provider tokens
-- [API](docs/api.md): endpoints and error headers
-- [Configuration](docs/configuration.md): environment variables
-- [Logging](docs/logging.md): log fields, error events, client IP resolution
+- [Reference](docs/en/reference.md): authentication, response format, and shared conventions
+- [Deployment Modes](docs/en/topics/deployment-modes.md): users table setup per mode
+- [OAuth2](docs/en/topics/oauth2.md) and [Tokens](docs/en/topics/tokens.md): login flow, rotation, provider tokens
+- [API](docs/en/resources/session.md): endpoints, objects, and parameters
+- [Status Codes](docs/en/topics/status-codes.md): HTTP status codes and error headers
+- [Configuration](docs/en/topics/configuration.md): environment variables
+- [Logging](docs/en/topics/logging.md): log fields, error events, client IP resolution
 
 ## Requirements
 

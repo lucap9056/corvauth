@@ -32,7 +32,7 @@ Device-bound session 認證 server
 docker compose up -d
 ```
 
-使用 image `ghcr.io/lucap9056/corvauth`，以 **managed users** 模式並開啟註冊，透過 GitHub 登入（其他 provider 見[設定](docs/configuration.zh-TW.md)）
+使用 image `ghcr.io/lucap9056/corvauth`，以 **managed users** 模式並開啟註冊，透過 GitHub 登入（其他 provider 見[設定](docs/zh-TW/topics/configuration.md#oauth2)）
 
 ### 開發
 
@@ -61,11 +61,13 @@ docker compose -f docker-dev/docker-compose.yml up --build -d
 
 ## 文件
 
-- [部署模式](docs/deployment-modes.zh-TW.md)：各模式的 users table 設定
-- [Session](docs/sessions.zh-TW.md)：登入流程、token、rotation、provider token
-- [API](docs/api.zh-TW.md)：endpoint 與 error header
-- [設定](docs/configuration.zh-TW.md)：環境變數
-- [Logging](docs/logging.zh-TW.md)：log field、錯誤 event、client IP 判定
+- [Reference](docs/zh-TW/reference.md)：認證方式、回應格式與共用慣例
+- [部署模式](docs/zh-TW/topics/deployment-modes.md)：各模式的 users table 設定
+- [OAuth2](docs/zh-TW/topics/oauth2.md) 與 [Token](docs/zh-TW/topics/tokens.md)：登入流程、rotation、provider token
+- [API](docs/zh-TW/resources/session.md)：endpoint、物件與參數
+- [Status Code](docs/zh-TW/topics/status-codes.md)：HTTP status code 與 error header
+- [設定](docs/zh-TW/topics/configuration.md)：環境變數
+- [Logging](docs/zh-TW/topics/logging.md)：log field、錯誤 event、client IP 判定
 
 ## 需求
 
