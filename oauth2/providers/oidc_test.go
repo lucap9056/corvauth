@@ -110,11 +110,17 @@ func TestFetchDiscovery_RetriesOnServerError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	if _, err := FetchDiscovery(ctx, srv.URL); err != nil {
+	var retries int
+	onRetry := WithDiscoveryRetryHandler(func(error) { retries++ })
+
+	if _, err := FetchDiscovery(ctx, srv.URL, onRetry); err != nil {
 		t.Fatalf("expected success after retry, got %v", err)
 	}
 	if got := calls.Load(); got != 2 {
 		t.Errorf("expected 2 calls, got %d", got)
+	}
+	if retries != 1 {
+		t.Errorf("expected retry handler to be called once, got %d", retries)
 	}
 }
 

@@ -67,7 +67,7 @@ func New(cfg Config, opts ...providers.Option) *Client {
 // well-known configuration document and auto-populates all endpoints.
 // The "openid" scope is automatically added if not already present.
 func NewOIDC(ctx context.Context, cfg OIDCConfig, opts ...providers.Option) (*Client, error) {
-	discovery, err := providers.FetchDiscovery(ctx, cfg.IssuerURL)
+	discovery, err := providers.FetchDiscovery(ctx, cfg.IssuerURL, opts...)
 	if err != nil {
 		return nil, err
 	}

@@ -3,6 +3,7 @@ package providers
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"golang.org/x/oauth2"
 )
@@ -20,6 +21,7 @@ var (
 
 type Options struct {
 	AllowUnverifiedEmail bool
+	OnDiscoveryRetry     func(err error)
 }
 
 type Option func(*Options)
@@ -30,8 +32,24 @@ func WithAllowUnverifiedEmail(allowed bool) Option {
 	}
 }
 
+func WithDiscoveryRetryHandler(handler func(err error)) Option {
+	return func(o *Options) {
+		o.OnDiscoveryRetry = handler
+	}
+}
+
+func DefaultDiscoveryRetryHandler(err error) {
+	fmt.Printf("Failed to fetch discovery document: %v. Retrying...\n", err)
+}
+
+func (o Options) discoveryRetried(err error) {
+	if o.OnDiscoveryRetry != nil {
+		o.OnDiscoveryRetry(err)
+	}
+}
+
 func newOptions(opts []Option) Options {
-	var o Options
+	o := Options{OnDiscoveryRetry: DefaultDiscoveryRetryHandler}
 	for _, opt := range opts {
 		opt(&o)
 	}

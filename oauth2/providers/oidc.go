@@ -70,7 +70,8 @@ type idTokenClaims struct {
 
 // FetchDiscovery retrieves the OIDC discovery document from the issuer's
 // well-known endpoint.
-func FetchDiscovery(ctx context.Context, issuerURL string) (*OIDCDiscovery, error) {
+func FetchDiscovery(ctx context.Context, issuerURL string, opts ...Option) (*OIDCDiscovery, error) {
+	options := newOptions(opts)
 	discoveryURL := strings.TrimRight(issuerURL, "/") + "/.well-known/openid-configuration"
 
 	for {
@@ -98,7 +99,7 @@ func FetchDiscovery(ctx context.Context, issuerURL string) (*OIDCDiscovery, erro
 				return nil, err
 			}
 
-			fmt.Printf("Failed to fetch discovery document: %v. Retrying...\n", err)
+			options.discoveryRetried(err)
 			select {
 			case <-ctx.Done():
 			case <-time.After(2 * time.Second):
