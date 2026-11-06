@@ -1,15 +1,17 @@
 package session
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/lucap9056/corvauth/jwt"
+	"github.com/lucap9056/corvauth/server/internal/events"
 	"github.com/lucap9056/corvauth/server/internal/handlers/bearer"
 	"github.com/lucap9056/corvauth/server/internal/handlers/options"
 	"github.com/lucap9056/corvauth/server/internal/handlers/refreshtoken"
 	"github.com/lucap9056/corvauth/server/internal/handlers/response"
 	"github.com/lucap9056/corvauth/server/internal/identity"
+	"github.com/lucap9056/corvauth/server/internal/logs"
+	"go.uber.org/zap"
 )
 
 type Handler struct {
@@ -33,22 +35,20 @@ func New(db options.DB, usersDB options.UsersDB, jwtManager *jwt.JWTManager, ide
 func (h *Handler) authenticate(w http.ResponseWriter, r *http.Request) (*jwt.AccessClaims, bool) {
 	tokenStr, ok := bearer.Token(r)
 	if !ok {
-		response.Unauthorized(w, response.BearerChallenge, "Missing Bearer token", nil)
+		response.Unauthorized(w, r, response.BearerChallenge, events.Unauthenticated, events.ReasonTokenMissing, "Missing Bearer token", nil)
 		return nil, false
 	}
 
 	claims, err := h.jwtManager.VerifyAccess(tokenStr)
 	if err != nil {
-		response.SetAuthError(w, err)
-		response.Unauthorized(w, response.InvalidTokenChallenge, "Invalid access token", err)
+		response.AuthFailure(w, r, events.ReasonTokenInvalid, "Invalid access token", err)
 		return nil, false
 	}
 	return claims, true
 }
 
-func rejectSpoofedIdentity(w http.ResponseWriter) {
-	w.Header().Set(response.AuthErrorHeader, response.AuthErrorSpoofedIdentity)
-	response.JSON(w, false, "Identity headers do not match the access token", http.StatusForbidden, nil)
+func rejectSpoofedIdentity(w http.ResponseWriter, r *http.Request) {
+	response.Reject(w, r, response.AuthErrorSpoofedIdentity, http.StatusForbidden, "Identity headers do not match the access token", nil)
 }
 
 func (h *Handler) carriesIdentity(r *http.Request) bool {
@@ -101,7 +101,7 @@ func (h *Handler) matchesClaims(r *http.Request, claims *jwt.AccessClaims) bool 
 
 func (h *Handler) Verify(w http.ResponseWriter, r *http.Request) {
 	if _, ok := bearer.Token(r); !ok && h.carriesIdentity(r) {
-		rejectSpoofedIdentity(w)
+		rejectSpoofedIdentity(w, r)
 		return
 	}
 
@@ -110,14 +110,14 @@ func (h *Handler) Verify(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !h.matchesClaims(r, claims) {
-		rejectSpoofedIdentity(w)
+		rejectSpoofedIdentity(w, r)
 		return
 	}
 
 	if h.identitySigner != nil {
 		identityToken, err := h.identitySigner.Sign(claims.UserEmail, claims.Username, claims.DeviceID, claims.ExpiresAt)
 		if err != nil {
-			response.JSON(w, false, "Failed to sign identity token", http.StatusInternalServerError, err)
+			response.Fail(w, r, events.InternalError, events.ReasonIdentitySignFailed, http.StatusInternalServerError, "Failed to sign identity token", err)
 			return
 		}
 		w.Header().Set(h.headers.Identity, identityToken)
@@ -137,7 +137,7 @@ func (h *Handler) VerifyOptional(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if h.carriesIdentity(r) {
-		rejectSpoofedIdentity(w)
+		rejectSpoofedIdentity(w, r)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -158,7 +158,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 
 	devices, err := h.db.ListDevices(claims.UserEmail)
 	if err != nil {
-		response.JSON(w, false, "Failed to list sessions", http.StatusInternalServerError, err)
+		response.Fail(w, r, events.InternalError, events.ReasonSessionListFailed, http.StatusInternalServerError, "Failed to list sessions", err)
 		return
 	}
 
@@ -181,13 +181,13 @@ func (h *Handler) DeleteAll(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.db.DeleteAllDevices(claims.UserEmail); err != nil {
-		response.JSON(w, false, "Failed to remove device sessions", http.StatusInternalServerError, err)
+		response.Fail(w, r, events.InternalError, events.ReasonSessionRevokeFailed, http.StatusInternalServerError, "Failed to remove device sessions", err)
 		return
 	}
 
 	refreshtoken.ClearCookie(w)
 
-	response.JSON(w, true, "Logged out from all sessions", http.StatusOK, nil)
+	response.JSON(w, true, "Logged out from all sessions", http.StatusOK)
 }
 
 func (h *Handler) DeleteCurrent(w http.ResponseWriter, r *http.Request) {
@@ -197,14 +197,14 @@ func (h *Handler) DeleteCurrent(w http.ResponseWriter, r *http.Request) {
 		if pErr == nil {
 			err = h.db.DeleteDevice(claims.Subject, claims.DeviceID)
 			if err != nil {
-				log.Printf("[WARN] Failed to delete device from DB on logout: %v", err)
+				logs.Event(logs.FromContext(r.Context()), events.InternalError, events.ReasonDeviceDeleteFailed, "failed to delete device on logout", err, zap.String("deviceId", claims.DeviceID))
 			}
 		}
 	}
 
 	refreshtoken.ClearCookie(w)
 
-	response.JSON(w, true, "Logged out and device session revoked", http.StatusOK, nil)
+	response.JSON(w, true, "Logged out and device session revoked", http.StatusOK)
 }
 
 func (h *Handler) DeleteMe(w http.ResponseWriter, r *http.Request) {
@@ -216,16 +216,16 @@ func (h *Handler) DeleteMe(w http.ResponseWriter, r *http.Request) {
 	userEmail := claims.UserEmail
 
 	if err := h.db.DeleteAllDevices(userEmail); err != nil {
-		response.JSON(w, false, "Failed to remove device sessions", http.StatusInternalServerError, err)
+		response.Fail(w, r, events.InternalError, events.ReasonSessionRevokeFailed, http.StatusInternalServerError, "Failed to remove device sessions", err)
 		return
 	}
 
 	if err := h.usersDB.DeleteUser(userEmail); err != nil {
-		response.JSON(w, false, "Failed to delete account", http.StatusInternalServerError, err)
+		response.Fail(w, r, events.InternalError, events.ReasonAccountDeleteFailed, http.StatusInternalServerError, "Failed to delete account", err)
 		return
 	}
 
 	refreshtoken.ClearCookie(w)
 
-	response.JSON(w, true, "Account deleted", http.StatusOK, nil)
+	response.JSON(w, true, "Account deleted", http.StatusOK)
 }

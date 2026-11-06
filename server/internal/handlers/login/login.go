@@ -17,6 +17,7 @@ import (
 	"github.com/lucap9056/corvauth/jwt"
 	"github.com/lucap9056/corvauth/oauth2/providers"
 	"github.com/lucap9056/corvauth/server/internal/cache/state"
+	"github.com/lucap9056/corvauth/server/internal/events"
 	"github.com/lucap9056/corvauth/server/internal/flight"
 	"github.com/lucap9056/corvauth/server/internal/handlers/options"
 	"github.com/lucap9056/corvauth/server/internal/handlers/refreshtoken"
@@ -75,9 +76,21 @@ type LoginResponse struct {
 type ExchangeResponse struct {
 	Success     bool
 	Message     string
+	Event       events.Event
+	Reason      string
 	State       int
 	OAuth2Token *response.TokenPair
 	AuthToken   *response.TokenPair
+}
+
+func exchangeFailure(event events.Event, reason, message string, status int) *ExchangeResponse {
+	return &ExchangeResponse{
+		Success: false,
+		Message: message,
+		Event:   event,
+		Reason:  reason,
+		State:   status,
+	}
 }
 
 func generateState() string {
@@ -96,17 +109,17 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 
 	req, err := readLoginRequest(r)
 	if err != nil {
-		response.JSON(w, false, "Invalid request body", http.StatusBadRequest, nil)
+		response.Fail(w, r, events.InvalidRequest, events.ReasonBodyInvalid, http.StatusBadRequest, "Invalid request body", err)
 		return
 	}
 	requestedRedirectURL := req.RedirectURI
 	if requestedRedirectURL == "" && h.options.DefaultRedirectURL == "" {
-		response.JSON(w, false, "Missing redirect_uri parameter", http.StatusBadRequest, nil)
+		response.Fail(w, r, events.InvalidRequest, events.ReasonRedirectURIMissing, http.StatusBadRequest, "Missing redirect_uri parameter", nil)
 		return
 	}
 	redirectURL, allowed := h.resolveRedirectURL(requestedRedirectURL)
 	if !allowed {
-		response.JSON(w, false, "redirect_uri is not allowed", http.StatusBadRequest, nil)
+		response.Fail(w, r, events.InvalidRequest, events.ReasonRedirectURINotAllowed, http.StatusBadRequest, "redirect_uri is not allowed", nil)
 		return
 	}
 
@@ -115,7 +128,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 
 	session := state.Session{Verifier: verifier, RedirectURL: redirectURL}
 	if err := h.stateCache.Set(r.Context(), stateVal, session); err != nil {
-		response.JSON(w, false, "Failed to initialize login session", http.StatusInternalServerError, err)
+		response.Fail(w, r, events.InternalError, events.ReasonSessionInitFailed, http.StatusInternalServerError, "Failed to initialize login session", err)
 		return
 	}
 
@@ -149,13 +162,12 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 	code := r.FormValue("code")
 	state := r.FormValue("state")
 	if state == "" {
-		response.JSON(w, false, "Missing state parameter", http.StatusBadRequest, nil)
+		response.Fail(w, r, events.InvalidRequest, events.ReasonStateMissing, http.StatusBadRequest, "Missing state parameter", nil)
 		return
 	}
 
 	if err := h.oauth2Client.ValidateIssuer(r.FormValue("iss")); err != nil {
-		w.Header().Set(response.AuthErrorHeader, response.AuthErrorInvalidIssuer)
-		response.JSON(w, false, "Invalid issuer", http.StatusBadRequest, err)
+		response.Reject(w, r, response.AuthErrorInvalidIssuer, http.StatusBadRequest, "Invalid issuer", err)
 		return
 	}
 
@@ -163,13 +175,14 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 		deleteCtx, deleteCancel := context.WithTimeout(r.Context(), 5*time.Second)
 		defer deleteCancel()
 		_, deleteErr := h.stateCache.Take(deleteCtx, state)
-		response.JSON(w, false, "Authorization failed at provider", providerErrorStatus(providerError),
+		status := providerErrorStatus(providerError)
+		response.Fail(w, r, providerErrorEvent(status), events.ProviderReason(providerError), status, "Authorization failed at provider",
 			errors.Join(fmt.Errorf("provider returned error: %q", providerError), deleteErr))
 		return
 	}
 
 	if code == "" {
-		response.JSON(w, false, "Missing code parameter", http.StatusBadRequest, nil)
+		response.Fail(w, r, events.InvalidRequest, events.ReasonCodeMissing, http.StatusBadRequest, "Missing code parameter", nil)
 		return
 	}
 
@@ -181,8 +194,12 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 	headerVerifier := r.Header.Get("X-PKCE-Verifier")
 
 	res, err := h.handleExchange(code, state, deviceName, headerVerifier)
+	if res == nil {
+		response.Fail(w, r, events.InternalError, events.ReasonUnexpectedResult, http.StatusInternalServerError, "", err)
+		return
+	}
 	if err != nil || !res.Success {
-		response.JSON(w, res.Success, res.Message, res.State, err)
+		response.Fail(w, r, res.Event, res.Reason, res.State, res.Message, err)
 		return
 	}
 
@@ -212,7 +229,14 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response.JSON(w, false, "", http.StatusInternalServerError, nil)
+	response.Fail(w, r, events.InternalError, events.ReasonUnexpectedResult, http.StatusInternalServerError, "", nil)
+}
+
+func providerErrorEvent(status int) events.Event {
+	if status >= http.StatusInternalServerError {
+		return events.UpstreamError
+	}
+	return events.Denied
 }
 
 func providerErrorStatus(providerError string) int {
@@ -240,27 +264,15 @@ func (h *Handler) handleExchange(code, state, device, headerVerifier string) (*E
 
 		session, err := h.stateCache.Take(stateCtx, state)
 		if err != nil {
-			return &ExchangeResponse{
-				Success: false,
-				Message: "Failed to retrieve login session",
-				State:   http.StatusInternalServerError,
-			}, err
+			return exchangeFailure(events.InternalError, events.ReasonStateLookupFailed, "Failed to retrieve login session", http.StatusInternalServerError), err
 		}
 		if session.Verifier == "" {
-			return &ExchangeResponse{
-				Success: false,
-				Message: "Invalid or expired state",
-				State:   http.StatusBadRequest,
-			}, nil
+			return exchangeFailure(events.InvalidRequest, events.ReasonStateInvalid, "Invalid or expired state", http.StatusBadRequest), nil
 		}
 
 		if h.options.ClientPKCE {
 			if headerVerifier != session.Verifier {
-				return &ExchangeResponse{
-					Success: false,
-					Message: "Invalid PKCE verifier",
-					State:   http.StatusBadRequest,
-				}, nil
+				return exchangeFailure(events.InvalidRequest, events.ReasonPKCEInvalid, "Invalid PKCE verifier", http.StatusBadRequest), nil
 			}
 		}
 
@@ -269,17 +281,9 @@ func (h *Handler) handleExchange(code, state, device, headerVerifier string) (*E
 		oauth2Token, err := h.oauth2Client.Exchange(exchangeCtx, code, session.Verifier, session.RedirectURL)
 		if err != nil {
 			if err == context.DeadlineExceeded {
-				return &ExchangeResponse{
-					Success: false,
-					Message: "OAuth2 provider timeout",
-					State:   http.StatusGatewayTimeout,
-				}, err
+				return exchangeFailure(events.UpstreamError, events.ReasonProviderTimeout, "OAuth2 provider timeout", http.StatusGatewayTimeout), err
 			}
-			return &ExchangeResponse{
-				Success: false,
-				Message: "Code exchange failed",
-				State:   http.StatusInternalServerError,
-			}, err
+			return exchangeFailure(events.UpstreamError, events.ReasonCodeExchangeFailed, "Code exchange failed", http.StatusInternalServerError), err
 		}
 
 		if h.db != nil {
@@ -287,74 +291,44 @@ func (h *Handler) handleExchange(code, state, device, headerVerifier string) (*E
 			defer getUserCancel()
 			user, err := h.oauth2Client.GetUser(getUserCtx, oauth2Token)
 			if err != nil {
-				return &ExchangeResponse{
-					Success: false,
-					Message: "Failed to fetch user info",
-					State:   http.StatusInternalServerError,
-				}, err
+				return exchangeFailure(events.UpstreamError, events.ReasonUserinfoFailed, "Failed to fetch user info", http.StatusInternalServerError), err
 			}
 
 			username, err := h.users.GetUsername(user.Email)
 			if errors.Is(err, database.ErrUserNotFound) && !h.users.External() && h.options.AllowRegistration {
 				createdUser, createErr := h.users.CreateUser(user.Name, user.Email)
 				if createErr != nil {
-					return &ExchangeResponse{
-						Success: false,
-						Message: "Failed to create user",
-						State:   http.StatusInternalServerError,
-					}, createErr
+					return exchangeFailure(events.InternalError, events.ReasonUserCreateFailed, "Failed to create user", http.StatusInternalServerError), createErr
 				}
 				username, err = createdUser.Username, nil
 			}
 			if errors.Is(err, database.ErrUserNotFound) {
-				return &ExchangeResponse{
-					Success: false,
-					Message: "User not found",
-					State:   http.StatusUnauthorized,
-				}, nil
+				return exchangeFailure(events.Denied, events.ReasonUserNotFound, "User not found", http.StatusUnauthorized), nil
 			}
 			if err != nil {
-				return &ExchangeResponse{
-					Success: false,
-					Message: "Failed to fetch username",
-					State:   http.StatusInternalServerError,
-				}, err
+				return exchangeFailure(events.InternalError, events.ReasonUserLookupFailed, "Failed to fetch username", http.StatusInternalServerError), err
 			}
 
 			secret := generateDeviceSecret()
 
 			deviceID, err := h.db.SaveDeviceSecret(user.Email, device, secret)
 			if errors.Is(err, database.ErrUserNotFound) {
-				return &ExchangeResponse{
-					Success: false,
-					Message: "User not found",
-					State:   http.StatusUnauthorized,
-				}, nil
+				return exchangeFailure(events.Denied, events.ReasonUserNotFound, "User not found", http.StatusUnauthorized), nil
 			}
 			if err != nil {
-				return &ExchangeResponse{
-					Success: false,
-					Message: "Failed to register device session",
-					State:   http.StatusInternalServerError,
-				}, err
+				return exchangeFailure(events.InternalError, events.ReasonDeviceRegisterFailed, "Failed to register device session", http.StatusInternalServerError), err
 			}
 
 			refreshToken, err := h.jwtManager.GenerateRefresh(user.Email, deviceID, secret, initialDeviceGeneration)
 			if err != nil {
-				return &ExchangeResponse{
-					Success: false,
-					Message: "Refresh token generation failed",
-					State:   http.StatusInternalServerError,
-				}, errors.Join(err, h.db.DeleteDevice(user.Email, deviceID))
+				return exchangeFailure(events.InternalError, events.ReasonTokenIssueFailed, "Refresh token generation failed", http.StatusInternalServerError),
+					errors.Join(err, h.db.DeleteDevice(user.Email, deviceID))
 			}
 
 			accessToken, err := h.jwtManager.GenerateAccess(refreshToken, username)
 			if err != nil {
-				return &ExchangeResponse{
-					Success: false,
-					Message: "Access token generation failed",
-					State:   http.StatusInternalServerError,
-				}, errors.Join(err, h.db.DeleteDevice(user.Email, deviceID))
+				return exchangeFailure(events.InternalError, events.ReasonTokenIssueFailed, "Access token generation failed", http.StatusInternalServerError),
+					errors.Join(err, h.db.DeleteDevice(user.Email, deviceID))
 			}
 
 			if !h.options.PassOAuthToken {

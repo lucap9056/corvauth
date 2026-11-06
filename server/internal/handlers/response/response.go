@@ -3,10 +3,12 @@ package response
 import (
 	"encoding/json/v2"
 	"errors"
-	"log"
 	"net/http"
 
 	"github.com/lucap9056/corvauth/jwt"
+	"github.com/lucap9056/corvauth/server/internal/events"
+	"github.com/lucap9056/corvauth/server/internal/logs"
+	"go.uber.org/zap"
 )
 
 type TokenPair struct {
@@ -19,18 +21,19 @@ type Body[T any] struct {
 	Message T    `json:"message"`
 }
 
-func JSON[T any](w http.ResponseWriter, success bool, message T, code int, internalErr error) {
+func JSON[T any](w http.ResponseWriter, success bool, message T, code int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
-
-	if internalErr != nil {
-		log.Printf("[ERROR] Status: %d, Msg: %v, Err: %v", code, message, internalErr)
-	}
 
 	json.MarshalWrite(w, Body[T]{
 		Success: success,
 		Message: message,
 	})
+}
+
+func NoStoreJSON[T any](w http.ResponseWriter, success bool, message T, code int) {
+	w.Header().Set("Cache-Control", "no-store")
+	JSON(w, success, message, code)
 }
 
 const (
@@ -48,25 +51,53 @@ const (
 	AuthErrorSpoofedIdentity  = "spoofed_identity_header"
 )
 
-func SetAuthError(w http.ResponseWriter, err error) {
+func Fail(w http.ResponseWriter, r *http.Request, event events.Event, reason string, status int, message string, err error, fields ...zap.Field) {
+	if event == events.Rejected {
+		panic("response: rejected events must go through Reject so X-Auth-Error stays in sync")
+	}
+	logFailure(r, event, reason, status, err, fields)
+	JSON(w, false, message, status)
+}
+
+func Reject(w http.ResponseWriter, r *http.Request, reason string, status int, message string, err error, fields ...zap.Field) {
+	w.Header().Set(AuthErrorHeader, reason)
+	logFailure(r, events.Rejected, reason, status, err, fields)
+	JSON(w, false, message, status)
+}
+
+func Unauthorized(w http.ResponseWriter, r *http.Request, challenge string, event events.Event, reason, message string, err error, fields ...zap.Field) {
+	w.Header().Set("WWW-Authenticate", challenge)
+	Fail(w, r, event, reason, http.StatusUnauthorized, message, err, fields...)
+}
+
+func AuthFailure(w http.ResponseWriter, r *http.Request, fallbackReason, message string, err error, fields ...zap.Field) {
+	w.Header().Set("WWW-Authenticate", InvalidTokenChallenge)
+	if reason, ok := authErrorReason(err); ok {
+		Reject(w, r, reason, http.StatusUnauthorized, message, err, fields...)
+		return
+	}
+	Fail(w, r, events.Unauthenticated, fallbackReason, http.StatusUnauthorized, message, err, fields...)
+}
+
+func authErrorReason(err error) (string, bool) {
 	switch {
 	case errors.Is(err, jwt.ErrDeviceNotFound):
-		w.Header().Set(AuthErrorHeader, AuthErrorDeviceNotFound)
+		return AuthErrorDeviceNotFound, true
 	case errors.Is(err, jwt.ErrInvalidSignature):
-		w.Header().Set(AuthErrorHeader, AuthErrorInvalidSignature)
+		return AuthErrorInvalidSignature, true
 	case errors.Is(err, jwt.ErrInvalidDeviceTag):
-		w.Header().Set(AuthErrorHeader, AuthErrorInvalidDeviceTag)
+		return AuthErrorInvalidDeviceTag, true
 	case errors.Is(err, jwt.ErrUnexpectedSigningMethod):
-		w.Header().Set(AuthErrorHeader, AuthErrorUnexpectedAlg)
+		return AuthErrorUnexpectedAlg, true
 	}
+	return "", false
 }
 
-func Unauthorized(w http.ResponseWriter, challenge, message string, internalErr error) {
-	w.Header().Set("WWW-Authenticate", challenge)
-	JSON(w, false, message, http.StatusUnauthorized, internalErr)
-}
-
-func NoStoreJSON[T any](w http.ResponseWriter, success bool, message T, code int) {
-	w.Header().Set("Cache-Control", "no-store")
-	JSON(w, success, message, code, nil)
+func logFailure(r *http.Request, event events.Event, reason string, status int, err error, fields []zap.Field) {
+	msg := "request rejected"
+	if status >= http.StatusInternalServerError {
+		msg = "request failed"
+	}
+	fields = append(fields, zap.Int("status", status))
+	logs.Event(logs.FromContext(r.Context()), event, reason, msg, err, fields...)
 }

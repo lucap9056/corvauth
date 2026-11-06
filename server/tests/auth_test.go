@@ -13,6 +13,7 @@ import (
 
 	gojwt "github.com/golang-jwt/jwt/v5"
 	"github.com/lucap9056/corvauth/jwt"
+	"github.com/lucap9056/corvauth/server/internal/events"
 	"github.com/lucap9056/corvauth/server/internal/handlers/options"
 	"github.com/lucap9056/corvauth/server/internal/handlers/response"
 	"github.com/lucap9056/corvauth/server/internal/identity"
@@ -1125,6 +1126,7 @@ func TestRefresh_RevokedTokenDeletesDevice(t *testing.T) {
 
 	for _, route := range []string{routeTokens, routeAccessToken, routeCurrentSession} {
 		t.Run(route, func(t *testing.T) {
+			recorded := observeLogs(t)
 			stub := newOAuthStub("", "", "")
 			defer stub.Close()
 
@@ -1145,6 +1147,9 @@ func TestRefresh_RevokedTokenDeletesDevice(t *testing.T) {
 			}
 			if _, exists := db.devices[deviceID]; exists {
 				t.Error("device must be deleted after a revoked refresh token is reused")
+			}
+			if fields := requireEvent(t, recorded, events.Unauthenticated, events.ReasonRefreshTokenReused); fields["deviceId"] != deviceID {
+				t.Errorf("deviceId: got %v, want %q", fields["deviceId"], deviceID)
 			}
 		})
 	}
