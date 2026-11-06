@@ -65,6 +65,7 @@ docker compose -f docker-dev/docker-compose.yml up --build -d
 - [Session](docs/sessions.zh-TW.md)：登入流程、token、rotation、provider token
 - [API](docs/api.zh-TW.md)：endpoint 與 error header
 - [設定](docs/configuration.zh-TW.md)：環境變數
+- [Logging](docs/logging.zh-TW.md)：log field、錯誤 event、client IP 判定
 
 ## 需求
 

@@ -65,6 +65,7 @@ Selected by `DATABASE_URL` and `DB_USER_EMAIL_REFERENCE`:
 - [Sessions](docs/sessions.md): login flow, tokens, rotation, provider tokens
 - [API](docs/api.md): endpoints and error headers
 - [Configuration](docs/configuration.md): environment variables
+- [Logging](docs/logging.md): log fields, error events, client IP resolution
 
 ## Requirements
 

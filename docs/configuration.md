@@ -11,6 +11,14 @@ Invalid values stop the server on startup
 | `HTTP_ADDRESS` | `:80` | Listen address; `unix:///path/to.sock` listens on a Unix socket |
 | `HTTP_MODE` | `production` | `development` drops `Secure` from the `refresh_token` cookie, for local HTTP testing |
 | `REDIS_URL` | — | Stores `state`, caches device secrets, dedupes `/callback` and refresh token rotation across instances; unset: in-memory, single instance only |
+| `TRUSTED_CLIENT_IP_HEADER` | — | Client IP header set by the trusted proxy (e.g. `X-Real-IP`); unset: remote address. See [Logging](logging.md#client-ip) |
+
+## Logging
+
+| Variable | Default | Description |
+|---|---|---|
+| `LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error` |
+| `LOG_FORMAT` | `console` | `console` or `json` |
 
 ## OAuth2.0 Provider
 

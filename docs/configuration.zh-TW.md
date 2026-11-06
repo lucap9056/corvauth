@@ -11,6 +11,14 @@
 | `HTTP_ADDRESS` | `:80` | 監聽位址，`unix:///path/to.sock` 改聽 Unix socket |
 | `HTTP_MODE` | `production` | `development` 時 `refresh_token` cookie 不標 `Secure`，供本機 HTTP 測試 |
 | `REDIS_URL` | — | 存 `state`、快取 device secret、跨實例去重 `/callback` 與 refresh token rotation，未設則用記憶體，僅限單一實例 |
+| `TRUSTED_CLIENT_IP_HEADER` | — | 信任的 proxy 寫入 client IP 的 header（如 `X-Real-IP`），未設則用 remote address，見 [Logging](logging.zh-TW.md#client-ip) |
+
+## Logging
+
+| 變數 | 預設值 | 說明 |
+|---|---|---|
+| `LOG_LEVEL` | `info` | `debug`、`info`、`warn`、`error` |
+| `LOG_FORMAT` | `console` | `console` 或 `json` |
 
 ## OAuth2.0 Provider
 
