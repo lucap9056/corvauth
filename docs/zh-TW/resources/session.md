@@ -17,7 +17,7 @@
 | 欄位 | 型別 | 說明 |
 |---|---|---|
 | device_id | string | Device session 的 ID |
-| device_name | string | 送到 [完成登入](#get-sessions-callback) 的 `X-Device-Name`，預設 `Unknown Device` |
+| device_name | string | 送到 [完成登入](#get-sessions-callback) 的 `X-Device-Name`，未帶時由 `User-Agent` 產生 |
 | updated_at | integer | 最後一次登入或 refresh 的 Unix 秒數 |
 | current | boolean | 此 request 的 access token 是否屬於這個 session |
 
@@ -96,7 +96,7 @@ Device session 稍後由 [完成登入](#get-sessions-callback) 建立。
 
 | Header | 說明 |
 |---|---|
-| X-Device-Name? | 新 device session 的名稱，預設 `Unknown Device` |
+| X-Device-Name? | 新 device session 的名稱<br>未帶時由 `User-Agent` 產生<br>`User-Agent` 也為空時為 `Unknown Device` |
 | X-PKCE-Verifier? | `OAUTH2_CLIENT_PKCE=true` 時必填 |
 
 ::: warning

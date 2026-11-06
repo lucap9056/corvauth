@@ -17,7 +17,7 @@ Except [Start Login](#post-sessions) and [Complete Login](#get-sessions-callback
 | Field | Type | Description |
 |---|---|---|
 | device_id | string | ID of the device session |
-| device_name | string | `X-Device-Name` sent to [Complete Login](#get-sessions-callback), `Unknown Device` by default |
+| device_name | string | `X-Device-Name` sent to [Complete Login](#get-sessions-callback), generated from `User-Agent` when omitted |
 | updated_at | integer | Unix seconds of the last login or refresh |
 | current | boolean | Whether the access token of the request belongs to this session |
 
@@ -98,7 +98,7 @@ The redirect URL page passes the `code` and `state` it received from the provide
 
 | Header | Description |
 |---|---|
-| X-Device-Name? | Name of the new device session, `Unknown Device` by default |
+| X-Device-Name? | Name of the new device session<br>Omitted: generated from `User-Agent`<br>`Unknown Device` when `User-Agent` is also empty |
 | X-PKCE-Verifier? | Required when `OAUTH2_CLIENT_PKCE=true` |
 
 ::: warning

@@ -137,9 +137,9 @@ paths:
             type: string
         - name: X-Device-Name
           in: header
+          description: Generated from User-Agent when omitted, Unknown Device when User-Agent is also empty
           schema:
             type: string
-            default: Unknown Device
           example: My Laptop
         - name: X-PKCE-Verifier
           in: header
