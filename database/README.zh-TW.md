@@ -66,6 +66,7 @@ defer db.Close()
 | `WithConnMaxLifetime(d)` | `5m` | 連線最長存活時間（僅 `NewDatabase`） |
 | `WithConnMaxIdleTime(d)` | `2m` | 連線最長閒置時間（僅 `NewDatabase`） |
 | `WithCleanupInterval(d)` | `24h` | 清除 7 天未更新 device 的間隔，`0` 停用 |
+| `WithCleanupErrorHandler(fn)` | `log.Println` | 接收 cleanup worker 的錯誤，`nil` 則忽略 |
 | `WithAutoCreateSchema(bool)` | `false` | 啟動時建立 `auth_user_devices` table 與 index |
 | `WithUserEmailReference(ref)` | `users(email)` | foreign key 參照的 users table 與 email column |
 

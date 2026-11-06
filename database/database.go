@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"log"
 	"time"
 
 	"github.com/jackc/pgx/v5/stdlib"
@@ -16,10 +15,11 @@ const schemaAdvisoryLockKey int64 = 0x6175746864657669
 var ErrUnsupportedDriver = errors.New("database requires a *sql.DB backed by the pgx stdlib driver")
 
 type Database struct {
-	db     *sql.DB
-	ownsDB bool
-	ctx    context.Context
-	cancel context.CancelFunc
+	db             *sql.DB
+	ownsDB         bool
+	onCleanupError func(error)
+	ctx            context.Context
+	cancel         context.CancelFunc
 }
 
 func NewDatabase(dsn string, opts ...Option) (*Database, error) {
@@ -63,10 +63,11 @@ func open(db *sql.DB, cfg *options, ownsDB bool) (*Database, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	d := &Database{
-		db:     db,
-		ownsDB: ownsDB,
-		ctx:    ctx,
-		cancel: cancel,
+		db:             db,
+		ownsDB:         ownsDB,
+		onCleanupError: cfg.OnCleanupError,
+		ctx:            ctx,
+		cancel:         cancel,
 	}
 
 	if cfg.CleanupInterval > 0 {
@@ -117,8 +118,8 @@ func (d *Database) startCleanupWorker(interval time.Duration) {
 		select {
 		case <-ticker.C:
 			_, err := d.cleanupOldDevices()
-			if err != nil {
-				log.Println("Cleanup error:", err.Error())
+			if err != nil && d.onCleanupError != nil {
+				d.onCleanupError(err)
 			}
 		case <-d.ctx.Done():
 			return

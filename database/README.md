@@ -66,6 +66,7 @@ defer db.Close()
 | `WithConnMaxLifetime(d)` | `5m` | Max connection lifetime (`NewDatabase` only) |
 | `WithConnMaxIdleTime(d)` | `2m` | Max connection idle time (`NewDatabase` only) |
 | `WithCleanupInterval(d)` | `24h` | Interval for deleting devices not updated in 7 days; `0` disables |
+| `WithCleanupErrorHandler(fn)` | `log.Println` | Receives cleanup worker errors; `nil` discards them |
 | `WithAutoCreateSchema(bool)` | `false` | Create `auth_user_devices` and its indexes on startup |
 | `WithUserEmailReference(ref)` | `users(email)` | Users table and email column for the foreign key |
 

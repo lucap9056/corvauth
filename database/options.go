@@ -1,6 +1,7 @@
 package database
 
 import (
+	"log"
 	"time"
 
 	"github.com/lucap9056/corvauth/database/schema"
@@ -12,6 +13,7 @@ type options struct {
 	ConnMaxLifetime time.Duration
 	ConnMaxIdleTime time.Duration
 	CleanupInterval time.Duration
+	OnCleanupError  func(error)
 
 	Schema           *schema.Params
 	AutoCreateSchema bool
@@ -26,6 +28,7 @@ func defaultOptions() *options {
 		ConnMaxLifetime: 5 * time.Minute,
 		ConnMaxIdleTime: 2 * time.Minute,
 		CleanupInterval: 24 * time.Hour,
+		OnCleanupError:  logCleanupError,
 		Schema:          schema.DefaultParams(),
 	}
 }
@@ -54,6 +57,16 @@ func WithCleanupInterval(d time.Duration) Option {
 	return func(o *options) {
 		o.CleanupInterval = d
 	}
+}
+
+func WithCleanupErrorHandler(handler func(error)) Option {
+	return func(o *options) {
+		o.OnCleanupError = handler
+	}
+}
+
+func logCleanupError(err error) {
+	log.Println("Cleanup error:", err.Error())
 }
 
 func WithConnMaxLifetime(d time.Duration) Option {

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -90,5 +91,26 @@ func TestNew_FailureKeepsCallerDBOpen(t *testing.T) {
 	}
 	if err := db.Ping(); err == nil || err.Error() == "sql: database is closed" {
 		t.Fatalf("caller db should stay open, Ping err = %v", err)
+	}
+}
+
+func TestCleanupWorker_ReportsErrorToHandler(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	cleanupErr := errors.New("connection reset")
+	mock.ExpectExec("DELETE FROM auth_user_devices").WillReturnError(cleanupErr)
+
+	reported := make(chan error, 1)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	d := &Database{db: db, onCleanupError: func(err error) { reported <- err }, ctx: ctx}
+	go d.startCleanupWorker(time.Millisecond)
+
+	if got := <-reported; !errors.Is(got, cleanupErr) {
+		t.Errorf("got %v, want %v", got, cleanupErr)
 	}
 }
